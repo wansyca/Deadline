@@ -13,6 +13,7 @@ public class Main {
     private static JFrame frame;
     private static JPanel mainPanel;
     private static CardLayout cardLayout;
+    private static GamePanel gamePanel;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -33,7 +34,9 @@ public class Main {
             mainPanel.add(new InputPlayerPanel(), INPUT_PLAYER);
             mainPanel.add(new SurvivorRankingUI(), LEADERBOARD);
             mainPanel.add(new LoadingPage(), LOADING);
-            mainPanel.add(new GamePanel(), GAME);
+            
+            gamePanel = new GamePanel();
+            mainPanel.add(gamePanel, GAME);
 
             frame.add(mainPanel);
             frame.setVisible(true);
@@ -66,6 +69,10 @@ public class Main {
     }
 
     public static void goToGameWithLoading(String playerName, String avatarPath) {
+        if (gamePanel != null) {
+            gamePanel.resetGame(playerName, avatarPath);
+        }
+        
         switchPage(LOADING);
 
         Timer timer = new Timer(2000, e -> switchPage(GAME));

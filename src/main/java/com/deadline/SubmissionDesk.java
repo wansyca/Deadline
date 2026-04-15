@@ -2,11 +2,12 @@ package com.deadline;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Font;
 
 public class SubmissionDesk extends GameObject {
 
     public SubmissionDesk(int x, int y) {
-        super(x, y, 120, 60);
+        super(x, y, 300, 100);
     }
 
     @Override
@@ -15,14 +16,31 @@ public class SubmissionDesk extends GameObject {
     }
 
     @Override
-    public void draw(Graphics2D g2d) {
-        g2d.setColor(new Color(139, 69, 19)); // SaddleBrown color
-        g2d.fillRect(x, y, width, height);
+    public void draw(Graphics2D g2) {
+        // Anti-aliasing
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
 
-        g2d.setColor(Color.WHITE);
-        g2d.drawString("SUBMISSION DESK", x + 5, y + height / 2 + 5);
+        // 1. Bayangan bawah
+        g2.setColor(new Color(0, 0, 0, 40));
+        g2.fillRoundRect(x + 5, y + 5, width, height, 10, 10);
 
-        g2d.setColor(Color.BLACK);
-        g2d.drawRect(x, y, width, height);
+        // 2. Body Meja (Coklat Tua)
+        g2.setColor(new Color(62, 39, 35));
+        g2.fillRoundRect(x, y, width, height, 8, 8);
+
+        // 3. Permukaan Atas (Warna Kayu Polished)
+        g2.setColor(new Color(93, 64, 55));
+        g2.fillRoundRect(x, y, width, height - 10, 8, 8);
+
+        // 4. Label "SUBMIT HERE"
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        String text = "SUBMIT HERE";
+        int tw = g2.getFontMetrics().stringWidth(text);
+        g2.drawString(text, x + (width - tw) / 2, y + height - 25);
+
+        // Highlight tepi
+        g2.setColor(new Color(255, 255, 255, 30));
+        g2.drawRoundRect(x, y, width, height - 10, 8, 8);
     }
 }

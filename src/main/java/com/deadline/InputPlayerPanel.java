@@ -15,6 +15,13 @@ public class InputPlayerPanel extends JPanel {
     private JButton maleBtn;
     private JButton femaleBtn;
 
+    private JButton playBtn;
+    private JButton backBtn;
+
+    private JLabel title;
+    private JLabel nameLabel;
+    private JLabel avatarLabel;
+
     private Image bg;
 
     public InputPlayerPanel() {
@@ -22,23 +29,18 @@ public class InputPlayerPanel extends JPanel {
 
         bg = new ImageIcon(getClass().getResource("/assets/bg.png")).getImage();
 
-        int centerX = 800 / 2;
-
         // TITLE
-        JLabel title = new JLabel("PLAYER REGISTRATION", SwingConstants.CENTER);
+        title = new JLabel("PLAYER REGISTRATION", SwingConstants.CENTER);
         title.setFont(new Font("Segoe UI", Font.BOLD, 36));
         title.setForeground(new Color(255, 50, 50));
-        title.setBounds(centerX - 250, 40, 500, 50);
         add(title);
 
         // NAME
-        JLabel nameLabel = new JLabel("Nama Mahasiswa:");
+        nameLabel = new JLabel("Nama Mahasiswa:");
         nameLabel.setForeground(Color.WHITE);
-        nameLabel.setBounds(centerX - 150, 120, 300, 25);
         add(nameLabel);
 
         nameField = new JTextField();
-        nameField.setBounds(centerX - 150, 150, 300, 40);
         nameField.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         nameField.setBackground(new Color(30, 30, 30));
         nameField.setForeground(Color.WHITE);
@@ -49,25 +51,21 @@ public class InputPlayerPanel extends JPanel {
         add(nameField);
 
         // AVATAR LABEL
-        JLabel avatarLabel = new JLabel("Pilih Avatar:");
+        avatarLabel = new JLabel("Pilih Avatar:");
         avatarLabel.setForeground(Color.WHITE);
-        avatarLabel.setBounds(centerX - 150, 210, 300, 25);
         add(avatarLabel);
 
         // AVATAR
         maleBtn = createAvatarCard("/assets/Avatar_1_cowo.png");
-        maleBtn.setBounds(centerX - 180, 250, 150, 170);
         add(maleBtn);
 
         femaleBtn = createAvatarCard("/assets/Avatar_2_cewe.png");
-        femaleBtn.setBounds(centerX + 30, 250, 150, 170);
         add(femaleBtn);
 
         selectCard(maleBtn, "/assets/Avatar_1_cowo.png");
 
         // BUTTON LANJUTKAN
-        JButton playBtn = createMainButton("LANJUTKAN");
-        playBtn.setBounds(centerX - 110, 460, 220, 50);
+        playBtn = createMainButton("LANJUTKAN");
         playBtn.addActionListener(e -> {
             String name = nameField.getText().trim();
             if (name.isEmpty())
@@ -78,18 +76,52 @@ public class InputPlayerPanel extends JPanel {
         add(playBtn);
 
         // BUTTON BACK
-        JButton backBtn = createMainButton("KEMBALI");
-        backBtn.setBounds(centerX - 110, 530, 220, 50);
+        backBtn = createMainButton("KEMBALI");
         backBtn.addActionListener(e -> Main.switchPage(Main.DASHBOARD));
         add(backBtn);
+
+        // 🔥 AUTO CENTER SAAT RESIZE
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateLayout();
+            }
+        });
+
+        // 🔥 PANGGIL AWAL
+        SwingUtilities.invokeLater(this::updateLayout);
     }
 
+    // =========================
+    // 🔥 METHOD CENTER LAYOUT
+    // =========================
+    private void updateLayout() {
+        int centerX = getWidth() / 2;
+
+        title.setBounds(centerX - 250, 40, 500, 50);
+
+        nameLabel.setBounds(centerX - 150, 120, 300, 25);
+        nameField.setBounds(centerX - 150, 150, 300, 40);
+
+        avatarLabel.setBounds(centerX - 150, 210, 300, 25);
+
+        maleBtn.setBounds(centerX - 180, 250, 150, 170);
+        femaleBtn.setBounds(centerX + 30, 250, 150, 170);
+
+        playBtn.setBounds(centerX - 110, 460, 220, 50);
+        backBtn.setBounds(centerX - 110, 530, 220, 50);
+    }
+
+    // =========================
+    // BUTTON STYLE
+    // =========================
     private JButton createMainButton(String text) {
         JButton btn = new JButton(text) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
                 if (getModel().isPressed()) {
                     g2.setColor(new Color(100, 0, 0));
                 } else if (getModel().isRollover()) {
@@ -97,20 +129,27 @@ public class InputPlayerPanel extends JPanel {
                 } else {
                     g2.setColor(new Color(150, 0, 0));
                 }
+
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
                 g2.dispose();
+
                 super.paintComponent(g);
             }
         };
+
         btn.setFocusPainted(false);
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setForeground(Color.WHITE);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 18));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
         return btn;
     }
 
+    // =========================
+    // AVATAR CARD
+    // =========================
     private JButton createAvatarCard(String path) {
         ImageIcon icon;
         try {
@@ -120,10 +159,6 @@ public class InputPlayerPanel extends JPanel {
             icon = new ImageIcon(imgUrl);
         } catch (Exception e) {
             return new JButton("Error Loading");
-        }
-
-        if (icon.getIconWidth() == -1) {
-            return new JButton("Error");
         }
 
         Image img = icon.getImage();
@@ -172,33 +207,28 @@ public class InputPlayerPanel extends JPanel {
 
         btn.setBorder(BorderFactory.createLineBorder(Color.GREEN, 3));
 
-        if (btn.getComponentCount() > 0 && btn.getComponent(0) instanceof JPanel) {
-            JPanel panel = (JPanel) btn.getComponent(0);
-            if (panel.getComponentCount() > 1 && panel.getComponent(1) instanceof JLabel) {
-                JLabel status = (JLabel) panel.getComponent(1);
-                status.setText("Using");
-                status.setForeground(Color.WHITE);
-            }
-        }
+        JPanel panel = (JPanel) btn.getComponent(0);
+        JLabel status = (JLabel) panel.getComponent(1);
+        status.setText("Using");
+        status.setForeground(Color.WHITE);
     }
 
     private void resetCard(JButton btn) {
-        if (btn == null)
-            return;
+        if (btn == null) return;
+
         btn.setBorder(null);
 
-        if (btn.getComponentCount() > 0 && btn.getComponent(0) instanceof JPanel) {
-            JPanel panel = (JPanel) btn.getComponent(0);
-            panel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
+        JPanel panel = (JPanel) btn.getComponent(0);
+        panel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
 
-            if (panel.getComponentCount() > 1 && panel.getComponent(1) instanceof JLabel) {
-                JLabel status = (JLabel) panel.getComponent(1);
-                status.setText("Click to use");
-                status.setForeground(Color.LIGHT_GRAY);
-            }
-        }
+        JLabel status = (JLabel) panel.getComponent(1);
+        status.setText("Click to use");
+        status.setForeground(Color.LIGHT_GRAY);
     }
 
+    // =========================
+    // BACKGROUND
+    // =========================
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

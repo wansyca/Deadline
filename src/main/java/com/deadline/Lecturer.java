@@ -22,8 +22,8 @@ public class Lecturer extends GameObject {
     private double visionRange = 2500;
 
     public Lecturer(int x, int y, double speed) {
-        // 🔥 DOSEN DIGEDEIN
-        super(x, y, 130, 140);
+        // 🔥 DOSEN DIGEDEIN (180x200)
+        super(x, y, 180, 200);
 
         this.speed = speed;
         exactX = x;
@@ -78,9 +78,10 @@ public class Lecturer extends GameObject {
         y = (int) exactY;
     }
 
-    // 🔥 HITBOX LEBIH KECIL (BIAR FAIR)
+    // 🔥 HITBOX LEBIH KECIL (BIAR FAIR & MUDAH LEWAT MEJA)
     public Rectangle getBounds() {
-        return new Rectangle(x + 30, y + 30, width - 60, height - 60);
+        // Padding lebih besar agar hitbox tetap ramping di tengah (70-80px)
+        return new Rectangle(x + 55, y + 60, width - 110, height - 120);
     }
 
     public boolean intersects(Player p) {
@@ -95,22 +96,22 @@ public class Lecturer extends GameObject {
     @Override
     public void draw(Graphics2D g) {
 
-        int offsetY = (int) (Math.sin(animTick * 0.3) * 4);
+        int offsetY = (int) (Math.sin(animTick * 0.3) * 5);
 
         // 🔥 SHADOW IKUT SIZE
-        g.setColor(new Color(0, 0, 0, 80));
-        g.fillOval(x + width / 4, y + height - 12, width / 2, 14);
+        g.setColor(new Color(0, 0, 0, 70));
+        g.fillOval(x + width / 4, y + height - 18, width / 2, 20);
 
         int shakeX = 0;
         int shakeY = 0;
 
         // 🔥 MODE NGEJAR + DEKAT = EFEK SEREM
-        if (state == State.CHASE && distanceToTarget < 250) {
-            shakeX = (int) (Math.random() * 6 - 3);
-            shakeY = (int) (Math.random() * 6 - 3);
+        if (state == State.CHASE && distanceToTarget < 300) {
+            shakeX = (int) (Math.random() * 8 - 4);
+            shakeY = (int) (Math.random() * 8 - 4);
 
-            g.setColor(new Color(255, 0, 0, 60));
-            g.fillOval(x - 20, y - 20, width + 40, height + 40);
+            g.setColor(new Color(255, 0, 0, 40));
+            g.fillOval(x - 30, y - 30, width + 60, height + 60);
         }
 
         g.drawImage(sprite, x + shakeX, y + offsetY + shakeY, width, height, null);

@@ -20,8 +20,8 @@ public class Player extends GameObject {
     private boolean facingRight = true;
 
     public Player(int x, int y) {
-        // 🔥 DIGEDEIN + PROPORSIONAL
-        super(x, y, 110, 110);
+        // 🔥 DIGEDEIN + PROPORSIONAL (160x160)
+        super(x, y, 160, 160);
         this.exactX = x;
         this.exactY = y;
     }
@@ -102,42 +102,43 @@ public class Player extends GameObject {
         y = prevY;
     }
 
-    // 🔥 HITBOX (PENTING BUAT COLLISION)
+    // 🔥 HITBOX (PAD LEBIH BESAR BIAR MUDAH LEWAT CELAH MEJA)
     public Rectangle getBounds() {
-        return new Rectangle(x + 20, y + 20, width - 40, height - 40);
+        // Kita beri padding 45px kiri-kanan agar hitbox asli hanya ~70px (mirip sebelumnya)
+        return new Rectangle(x + 45, y + 45, width - 90, height - 90);
     }
 
     @Override
     public void draw(Graphics2D g) {
-        int offsetY = (int) (Math.sin(animTick * 0.4) * 5);
-        int offsetX = (int) (Math.cos(animTick * 0.3) * 3);
+        int offsetY = (int) (Math.sin(animTick * 0.4) * 6);
+        int offsetX = (int) (Math.cos(animTick * 0.3) * 4);
 
         // SHADOW
-        g.setColor(new Color(0, 0, 0, 80));
-        g.fillOval(x + width / 4, y + height - 10, width / 2, 12);
+        g.setColor(new Color(0, 0, 0, 60));
+        g.fillOval(x + width / 4, y + height - 15, width / 2, 18);
 
         // PLAYER IMAGE
         if (avatar != null) {
             if (facingRight)
                 g.drawImage(avatar, x + offsetX, y + offsetY, width, height, null);
             else
-                g.drawImage(avatar, x + width, y + offsetY, -width, height, null);
+                g.drawImage(avatar, x + width + offsetX, y + offsetY, -width, height, null);
         }
 
-        // DRAW NAME
+        // DRAW NAME (Posisi lebih proporsional)
         g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 14));
+        g.setFont(new Font("Segoe UI", Font.BOLD, 16));
         int textWidth = g.getFontMetrics().stringWidth(name);
-        g.drawString(name, x + (width - textWidth) / 2, y + offsetY - 5);
+        g.drawString(name, x + (width - textWidth) / 2, y + offsetY - 10);
 
         // ITEM DI ATAS
         if (carriedAssignments > 0) {
-            g.setColor(Color.YELLOW);
-            g.fillOval(x + width - 30, y - 20, 28, 28);
+            g.setColor(new Color(255, 215, 0));
+            g.fillOval(x + width - 40, y, 32, 32);
 
             g.setColor(Color.BLACK);
-            g.setFont(new Font("Arial", Font.BOLD, 14));
-            g.drawString("" + carriedAssignments, x + width - 20, y);
+            g.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            g.drawString("" + carriedAssignments, x + width - 30, y + 22);
         }
 
         // 🔥 DEBUG HITBOX (boleh dihapus nanti)

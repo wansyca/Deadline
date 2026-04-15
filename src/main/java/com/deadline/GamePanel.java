@@ -178,7 +178,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                 for (int baris = 0; baris < 4; baris++) {
                     for (int kolom = 0; kolom < 4; kolom++) {
                         if (kolom == 2) continue;
-                        obstacles.add(new Rectangle(offsetX + (kolom * 260), offsetY + (baris * 180), mejaWidth, mejaHeight));
+                        // 🔥 Jarak antar meja diperlebar sedikit (320 & 220) agar karakter besar bisa lewat
+                        obstacles.add(new Rectangle(offsetX + (kolom * 320), offsetY + (baris * 220), mejaWidth, mejaHeight));
                     }
                 }
             }

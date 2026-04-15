@@ -42,7 +42,13 @@ public class LoadingPage extends JPanel {
             }
         });
 
-        timer.start();
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent evt) {
+                progress = 0;
+                timer.restart();
+            }
+        });
     }
 
     @Override

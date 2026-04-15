@@ -45,17 +45,43 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private boolean isGameWon = false;
 
     // 🔥 TIMER & BOOKS
+    private int currentLevel = 1;
     private int timeLeft = 120 * FPS;
     private int totalSubmitted = 0;
-    private final int MAX_BOOKS = 10;
+    private int MAX_BOOKS = 10;
 
     // Movement
     private boolean up, down, left, right;
+    
+    // UI Buttons bounds
+    private Rectangle btnNextLevel;
+    private Rectangle btnMenu;
+    private Rectangle btnRetry;
 
     public GamePanel() {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setFocusable(true);
         addKeyListener(this);
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                Point p = e.getPoint();
+                if (isGameOver) {
+                    if (btnRetry != null && btnRetry.contains(p)) {
+                        startLevel(currentLevel);
+                    } else if (btnMenu != null && btnMenu.contains(p)) {
+                        Main.switchPage(Main.DASHBOARD);
+                    }
+                } else if (isGameWon) {
+                    if (currentLevel == 1 && btnNextLevel != null && btnNextLevel.contains(p)) {
+                        startLevel(2);
+                    } else if (btnMenu != null && btnMenu.contains(p)) {
+                        Main.switchPage(Main.DASHBOARD);
+                    }
+                }
+            }
+        });
 
         initGame();
 
@@ -67,11 +93,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
     public void resetGame(String playerName, String avatarPath) {
         // Reset state
-        isGameOver = false;
-        isGameWon = false;
-        timeLeft = 120 * FPS;
-        totalSubmitted = 0;
-        
         up = false; down = false; left = false; right = false;
 
         // Reset entities
@@ -79,17 +100,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         player.setName(playerName);
         player.setAvatar(avatarPath);
 
-        lecturers.clear();
-        assignments.clear();
+        lecturers = new ArrayList<>();
+        assignments = new ArrayList<>();
         submissionDesks = new ArrayList<>();
 
-        initObstacles();
-        spawnLecturer();
-        spawnLecturer(); 
-
-        for (int i = 0; i < 15; i++) {
-            spawnAssignment();
-        }
+        startLevel(1);
     }
 
     // =========================
@@ -103,10 +118,39 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         assignments = new ArrayList<>();
         submissionDesks = new ArrayList<>();
 
+        startLevel(1);
+    }
+
+    private void startLevel(int level) {
+        currentLevel = level;
+        isGameOver = false;
+        isGameWon = false;
+        totalSubmitted = 0;
+        
+        player.setX(WORLD_WIDTH / 2);
+        player.setY(WORLD_HEIGHT / 2);
+        player.resetCarriedAssignments();
+
+        lecturers.clear();
+        assignments.clear();
+        submissionDesks.clear();
+
         initObstacles();
 
-        spawnLecturer();
-        spawnLecturer();
+        int numLecturers = 2;
+        if (level == 2) {
+            timeLeft = 90 * FPS;
+            MAX_BOOKS = 15;
+            numLecturers = 4;
+        } else {
+            timeLeft = 120 * FPS;
+            MAX_BOOKS = 10;
+            numLecturers = 2;
+        }
+
+        for (int i = 0; i < numLecturers; i++) {
+            spawnLecturer(level);
+        }
 
         for (int i = 0; i < 15; i++) {
             spawnAssignment();
@@ -176,11 +220,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         assignments.add(a);
     }
 
-    private void spawnLecturer() {
+    private void spawnLecturer(int level) {
+        double speed = (level == 2) ? (3.0 + random.nextDouble() * 1.5) : (2.0 + random.nextDouble() * 0.8);
         lecturers.add(new Lecturer(
                 random.nextInt(WORLD_WIDTH),
                 random.nextInt(WORLD_HEIGHT),
-                2.0 + random.nextDouble() * 0.8)); // Kecepatan di-nerf agak wajar
+                speed));
     }
 
     // =========================
@@ -266,7 +311,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                     System.out.println("TUGAS DISUBMIT! TOTAL: " + totalSubmitted);
 
                     if (totalSubmitted == 3 || totalSubmitted == 6 || totalSubmitted == 8) {
-                        spawnLecturer();
+                        spawnLecturer(currentLevel);
+                    }
+                    if (currentLevel == 2 && (totalSubmitted == 10 || totalSubmitted == 12 || totalSubmitted == 14)) {
+                        spawnLecturer(currentLevel);
                     }
 
                     if (totalSubmitted >= MAX_BOOKS) {
@@ -351,6 +399,18 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         drawUI(g2);
     }
 
+    private void drawButton(Graphics2D g2, String text, Rectangle rect, Color bgColor) {
+        g2.setColor(bgColor);
+        g2.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 20, 20);
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2));
+        g2.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 20, 20);
+        
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        int tw = g2.getFontMetrics().stringWidth(text);
+        g2.drawString(text, rect.x + (rect.width - tw) / 2, rect.y + 32);
+    }
+
     private void drawUI(Graphics2D g2) {
         // ==========================================
         // 💎 MODERN FLOATING HUD
@@ -402,6 +462,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             String subText = secondsLeft <= 0 ? "Waktu Habis!" : "Kamu tertangkap dosen!";
             int subWidth = g2.getFontMetrics().stringWidth(subText);
             g2.drawString(subText, (panelW - subWidth) / 2, panelH / 2 + 30);
+            
+            int btnY = panelH / 2 + 60;
+            btnRetry = new Rectangle(panelW / 2 - 210, btnY, 200, 50);
+            btnMenu = new Rectangle(panelW / 2 + 10, btnY, 200, 50);
+            
+            drawButton(g2, "Coba Lagi", btnRetry, new Color(200, 50, 50));
+            drawButton(g2, "Kembali ke Menu", btnMenu, new Color(50, 50, 50));
         }
 
         // GAME WON SCREEN
@@ -417,9 +484,27 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             
             g2.setColor(Color.WHITE);
             g2.setFont(new Font("Arial", Font.PLAIN, 24));
-            String subText = "Semua tugas berhasil disubmit tepat waktu!";
-            int sWidth = g2.getFontMetrics().stringWidth(subText);
-            g2.drawString(subText, (panelW - sWidth) / 2, panelH / 2 + 30);
+            
+            if (currentLevel == 1) {
+                String subText = "Semua tugas berhasil disubmit tepat waktu!";
+                int sWidth = g2.getFontMetrics().stringWidth(subText);
+                g2.drawString(subText, (panelW - sWidth) / 2, panelH / 2 + 30);
+
+                int btnY = panelH / 2 + 60;
+                btnNextLevel = new Rectangle(panelW / 2 - 210, btnY, 200, 50);
+                btnMenu = new Rectangle(panelW / 2 + 10, btnY, 200, 50);
+                
+                drawButton(g2, "Lanjut Level 2", btnNextLevel, new Color(50, 200, 50));
+                drawButton(g2, "Kembali ke Menu", btnMenu, new Color(50, 50, 50));
+            } else {
+                String subText = "KAMU MENYELESAIKAN GAME INI! SELAMAT!";
+                int sWidth = g2.getFontMetrics().stringWidth(subText);
+                g2.drawString(subText, (panelW - sWidth) / 2, panelH / 2 + 30);
+                
+                int btnY = panelH / 2 + 60;
+                btnMenu = new Rectangle(panelW / 2 - 100, btnY, 200, 50);
+                drawButton(g2, "Kembali ke Menu", btnMenu, new Color(50, 50, 50));
+            }
         }
     }
 
@@ -444,6 +529,21 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             case KeyEvent.VK_D:
             case KeyEvent.VK_RIGHT:
                 right = true;
+                break;
+            case KeyEvent.VK_ENTER:
+                if (isGameWon && currentLevel == 1) {
+                    startLevel(2);
+                }
+                break;
+            case KeyEvent.VK_B:
+                if (isGameWon || isGameOver) {
+                    Main.switchPage(Main.DASHBOARD);
+                }
+                break;
+            case KeyEvent.VK_R:
+                if (isGameOver) {
+                    startLevel(currentLevel);
+                }
                 break;
         }
     }

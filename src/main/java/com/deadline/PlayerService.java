@@ -80,6 +80,26 @@ public class PlayerService {
         return players;
     }
 
+    public boolean isUsernameExists(String username) {
+    String sql = "SELECT COUNT(*) FROM players WHERE username = ?";
+
+    try (Connection conn = DatabaseManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setString(1, username);
+        ResultSet rs = stmt.executeQuery();
+
+        if (rs.next()) {
+            return rs.getInt(1) > 0;
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return false;
+}
+
     public int getPlayerIdByUsername(String username) {
         String query = "SELECT id FROM players WHERE username = ?";
         try (Connection conn = DatabaseManager.getConnection();

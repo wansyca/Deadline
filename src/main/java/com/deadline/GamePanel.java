@@ -20,8 +20,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.Image;
 import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.Random;
+
 
 public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
@@ -51,7 +53,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private Timer timer;
     private Player player;
     private List<SubmissionDesk> submissionDesks;
-    private List<LeaderboardManager.PlayerScore> cachedTopScores;
+   private List<Map<String, Object>> cachedTopScores = new ArrayList<>();
     private List<Lecturer> lecturers;
     private List<Assignment> assignments;
     private List<Rectangle> obstacles;
@@ -271,25 +273,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         obstacles.add(new Rectangle(x + w - 80, y + h - 150, 80, 150));
     }
 
-    private void loadLeaderboardFromDB() {
-    cachedTopScores.clear();
-
+   private void loadLeaderboardFromDB() {
     com.deadline.backend.ScoreService ss = new com.deadline.backend.ScoreService();
-    List<String> data = ss.getTopScores (5);
-
-    for (String s : data) {
-        try {
-            String[] parts = s.split(" - ");
-            if (parts.length == 2) {
-                String name = parts[0];
-                int score = Integer.parseInt(parts[1]);
-
-                cachedTopScores.add(new LeaderboardManager.PlayerScore(name, score));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+    cachedTopScores = ss.getTopScores(5);
 }
 
     private void spawnAssignment() {
@@ -656,8 +642,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
                 int entryY = lbY + 65;
                 for (int i = 0; i < Math.min(cachedTopScores.size(), 5); i++) {
-                    LeaderboardManager.PlayerScore ps = cachedTopScores.get(i);
-                    boolean isCurrent = ps.name.equalsIgnoreCase(player.getName()) && ps.score == totalScore;
+                  Map<String, Object> ps = cachedTopScores.get(i);
+
+                    String name = (String) ps.get("username");
+                    int score = (int) ps.get("score");
+                    boolean isCurrent = name.equalsIgnoreCase(player.getName()) && score == totalScore;
 
                     // Rank 1 Glow Effect
                     if (i == 0) {
@@ -676,9 +665,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
                     String rankText = "#" + (i + 1);
                     g2.drawString(rankText, lbX + 20, entryY);
-                    g2.drawString(ps.name, lbX + 60, entryY);
+                    g2.drawString(name, lbX + 60, entryY);
                     
-                    String sText = String.valueOf(ps.score);
+                    String sText = String.valueOf(score);
                     int sWidth = g2.getFontMetrics().stringWidth(sText);
                     g2.drawString(sText, lbX + lbW - sWidth - 20, entryY);
 

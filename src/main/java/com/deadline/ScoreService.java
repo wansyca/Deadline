@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 public class ScoreService {
 
     public void saveScore(int playerId, int score, int survivalTime) {
@@ -24,34 +25,39 @@ public class ScoreService {
         }
     }
     
-    public List<Map<String, Object>> getTopScores(int limit) {
-        String query = "SELECT s.score, s.survival_time, p.username " +
-                       "FROM scores s " +
-                       "JOIN players p ON s.player_id = p.id " +
-                       "ORDER BY s.score DESC, s.survival_time DESC " +
-                       "LIMIT ?";
-                       
-        List<Map<String, Object>> topScores = new ArrayList<>();
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-             
-            pstmt.setInt(1, limit);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    Map<String, Object> record = new HashMap<>();
-                    record.put("score", rs.getInt("score"));
-                    record.put("survival_time", rs.getInt("survival_time"));
-                    record.put("username", rs.getString("username"));
-                    topScores.add(record);
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error getting top scores: " + e.getMessage());
-            e.printStackTrace();
+  public List<com.deadline.LeaderboardManager.PlayerScore> getTopScores(int limit) {
+    List<com.deadline.LeaderboardManager.PlayerScore> leaderboard = new ArrayList<>();
+
+    String sql = """
+        SELECT p.username, MAX(s.score) as best_score, MAX(s.survival_time) as survival_time
+        FROM scores s
+        JOIN players p ON s.player_id = p.id
+        GROUP BY p.id
+        ORDER BY best_score DESC
+        LIMIT ?
+    """;
+
+    try (Connection conn = DatabaseManager.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setInt(1, limit);
+        ResultSet rs = stmt.executeQuery();
+
+        while (rs.next()) {
+            String name = rs.getString("username");
+            int score = rs.getInt("best_score");
+            int time = rs.getInt("survival_time");
+
+            leaderboard.add(new com.deadline.LeaderboardManager.PlayerScore(name, score, time));
         }
-        return topScores;
+
+       
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
-    
+
+    return leaderboard;
+}
     public Map<String, Object> getBestScoreByPlayer(int playerId) {
         String query = "SELECT * FROM scores WHERE player_id = ? ORDER BY score DESC, survival_time DESC LIMIT 1";
         Map<String, Object> bestScore = new HashMap<>();

@@ -32,10 +32,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private static final int HEIGHT = 600;
 
     // =========================
-    // WORLD (MAP SUPER LUAS)
+    // WORLD (MAP SUPER LUAS - KAMPUS GEDUNG A)
     // =========================
-    private static final int WORLD_WIDTH = 4000;
-    private static final int WORLD_HEIGHT = 3000;
+    private static final int WORLD_WIDTH = 8000;
+    private static final int WORLD_HEIGHT = 6000;
 
     private static final int FPS = 60;
 
@@ -98,7 +98,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         timer = new Timer(1000 / FPS, this);
         timer.start();
 
-        System.out.println("GAME PANEL 4000x3000 FIX VERSION KELOAD ✅");
+        System.out.println("GAME PANEL 8000x6000 SURVIVAL VERSION KELOAD ✅");
     }
 
     public void resetGame(String playerName, String avatarPath) {
@@ -127,10 +127,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         if (player == null) {
             player = new Player(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
             player.setAvatar("/assets/Avatar_1_cowo.png");
-        } else {
-            player.setX(WORLD_WIDTH / 2);
-            player.setY(WORLD_HEIGHT / 2);
-            player.resetCarriedAssignments();
         }
 
         lecturers = new ArrayList<>();
@@ -139,13 +135,35 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
         initObstacles();
 
-        // Spawn lecturers (Awal game: 2 dosen)
-        for (int i = 0; i < 2; i++) {
+        // 🔥 SAFETY SPAWN: Cari lokasi kosong untuk player agar tidak nyangkut saat mulai
+        boolean safe = false;
+        int attempts = 0;
+        int spawnX = WORLD_WIDTH / 2;
+        int spawnY = WORLD_HEIGHT / 2;
+        
+        while (!safe && attempts < 100) {
+            player.setX(spawnX);
+            player.setY(spawnY);
+            safe = true;
+            for (Rectangle r : obstacles) {
+                if (player.getBounds().intersects(r)) {
+                    safe = false;
+                    spawnX = random.nextInt(WORLD_WIDTH - 500) + 250;
+                    spawnY = random.nextInt(WORLD_HEIGHT - 500) + 250;
+                    attempts++;
+                    break;
+                }
+            }
+        }
+        player.resetCarriedAssignments();
+
+        // Spawn lecturers (Awal game di map luas: 4 dosen)
+        for (int i = 0; i < 4; i++) {
             spawnLecturer();
         }
 
-        // Spawn assignments
-        for (int i = 0; i < 20; i++) {
+        // Spawn assignments (Seebarkan buku lebih banyak di map luas)
+        for (int i = 0; i < 50; i++) {
             spawnAssignment();
         }
     }
@@ -163,33 +181,83 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
     private void initObstacles() {
         obstacles = new ArrayList<>();
-        int wallThin = 40;
+        submissionDesks = new ArrayList<>();
+        int wallThin = 60;
+
+        // 1. BOUNDARY WALLS (Tembok Luar Kampus)
         obstacles.add(new Rectangle(0, 0, WORLD_WIDTH, wallThin));
         obstacles.add(new Rectangle(0, WORLD_HEIGHT - wallThin, WORLD_WIDTH, wallThin));
         obstacles.add(new Rectangle(0, 0, wallThin, WORLD_HEIGHT));
         obstacles.add(new Rectangle(WORLD_WIDTH - wallThin, 0, wallThin, WORLD_HEIGHT));
 
-        int mejaWidth = 120;
-        int mejaHeight = 80;
-        for (int areaY = 0; areaY < 2; areaY++) {
-            for (int areaX = 0; areaX < 2; areaX++) {
-                int offsetX = 400 + (areaX * 1800);
-                int offsetY = 400 + (areaY * 1300);
-                for (int baris = 0; baris < 4; baris++) {
-                    for (int kolom = 0; kolom < 4; kolom++) {
-                        if (kolom == 2) continue;
-                        // 🔥 Jarak antar meja diperlebar sedikit (320 & 220) agar karakter besar bisa lewat
-                        obstacles.add(new Rectangle(offsetX + (kolom * 320), offsetY + (baris * 220), mejaWidth, mejaHeight));
-                    }
+        // 2. CENTRAL CORRIDOR (Lorong Utama)
+        // Horizontal Corridor in the middle
+        int corridorY = WORLD_HEIGHT / 2 - 250;
+        int corridorH = 500;
+        // Tembok lorong atas & bawah dengan celah pintu
+        for (int x = 0; x < WORLD_WIDTH; x += 1000) {
+            // Celah pintu tiap 1000px
+            obstacles.add(new Rectangle(x, corridorY, 800, wallThin));
+            obstacles.add(new Rectangle(x, corridorY + corridorH, 800, wallThin));
+        }
+
+        // 3. CLASSROOMS (Ruangan-Ruangan)
+        // Kita bagi map jadi 8 ruangan besar (4 atas, 4 bawah)
+        int roomW = WORLD_WIDTH / 4;
+        int roomH = (WORLD_HEIGHT - corridorH) / 2;
+
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 4; col++) {
+                int startX = col * roomW;
+                int startY = (row == 0) ? 0 : corridorY + corridorH;
+
+                // Tembok pemisah antar kelas (vertical)
+                if (col > 0) {
+                    obstacles.add(new Rectangle(startX, startY, wallThin, roomH));
+                }
+
+                // ISI KELAS (Meja & Kursi)
+                generateRoomDecor(startX + 150, startY + 150, roomW - 300, roomH - 350);
+                
+                // SUBMISSION DESK (Satu di tiap ruangan atau tiap 2 ruangan)
+                if ((row + col) % 2 == 0) {
+                    int deskX = startX + roomW / 2 - 150;
+                    int deskY = startY + (row == 0 ? 100 : roomH - 200);
+                    Rectangle sdRect = new Rectangle(deskX, deskY, 300, 100);
+                    obstacles.add(sdRect);
+                    submissionDesks.add(new SubmissionDesk(deskX, deskY));
                 }
             }
         }
-        Rectangle d1 = new Rectangle(WORLD_WIDTH / 2 - 150, 100, 300, 100);
-        Rectangle d2 = new Rectangle(WORLD_WIDTH / 2 - 150, WORLD_HEIGHT - 200, 300, 100);
-        obstacles.add(d1);
-        obstacles.add(d2);
-        submissionDesks.add(new SubmissionDesk(d1.x, d1.y));
-        submissionDesks.add(new SubmissionDesk(d2.x, d2.y));
+
+        // 4. FURNITURE TAMBAHAN DI LORONG (Lemari & Bangku)
+        for (int x = 500; x < WORLD_WIDTH; x += 1500) {
+            // Lemari di lorong
+            obstacles.add(new Rectangle(x, corridorY + 100, 150, 80));
+            // Bangku di sisi lain
+            obstacles.add(new Rectangle(x + 400, corridorY + corridorH - 180, 200, 60));
+        }
+    }
+
+    private void generateRoomDecor(int x, int y, int w, int h) {
+        int mejaWidth = 120;
+        int mejaHeight = 80;
+        int spacingX = 350;
+        int spacingY = 250;
+
+        // Pola Meja Mahasiswa
+        for (int curY = y + 100; curY < y + h - 100; curY += spacingY) {
+            for (int curX = x; curX < x + w - 100; curX += spacingX) {
+                obstacles.add(new Rectangle(curX, curY, mejaWidth, mejaHeight));
+            }
+        }
+
+        // Meja Dosen / Podium di depan kelas
+        obstacles.add(new Rectangle(x + w / 2 - 100, y, 200, 80));
+        
+        // Lemari di pojok kelas
+        obstacles.add(new Rectangle(x, y, 80, 150));
+        obstacles.add(new Rectangle(x + w - 80, y + h - 150, 80, 150));
     }
 
     private void spawnAssignment() {
@@ -252,19 +320,35 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             dx++;
 
         player.setDirection(dx, dy);
-        player.update();
+        player.update(); // Hitung velocity
 
-        // Collision
+        // --- STEP movement X (Sliding Collision) ---
+        player.applyMoveX();
+        // Batas map X
+        if (player.getX() < 0 || player.getX() > WORLD_WIDTH - player.getWidth()) {
+            player.rollbackX();
+        }
+        // Collide obstacles X
         for (Rectangle rect : obstacles) {
             if (player.getBounds().intersects(rect)) {
-                player.rollback();
+                player.rollbackX();
                 break;
             }
         }
 
-        // Batas map
-        player.setX(Math.max(0, Math.min(player.getX(), WORLD_WIDTH - player.getWidth())));
-        player.setY(Math.max(0, Math.min(player.getY(), WORLD_HEIGHT - player.getHeight())));
+        // --- STEP movement Y (Sliding Collision) ---
+        player.applyMoveY();
+        // Batas map Y
+        if (player.getY() < 0 || player.getY() > WORLD_HEIGHT - player.getHeight()) {
+            player.rollbackY();
+        }
+        // Collide obstacles Y
+        for (Rectangle rect : obstacles) {
+            if (player.getBounds().intersects(rect)) {
+                player.rollbackY();
+                break;
+            }
+        }
 
         // Dosen AI
         for (Lecturer l : lecturers) {

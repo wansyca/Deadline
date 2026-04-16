@@ -8,7 +8,7 @@ public class Player extends GameObject {
     private Image avatar;
     private String name = "Mahasiswa";
 
-    private int prevX, prevY;
+    private double prevExactX, prevExactY;
     private double exactX, exactY;
     private double velX = 0, velY = 0;
     private int dX, dY;
@@ -24,6 +24,8 @@ public class Player extends GameObject {
         super(x, y, 160, 160);
         this.exactX = x;
         this.exactY = y;
+        this.prevExactX = x;
+        this.prevExactY = y;
     }
 
     public void setAvatar(String path) {
@@ -60,9 +62,6 @@ public class Player extends GameObject {
 
     @Override
     public void update() {
-        prevX = x;
-        prevY = y;
-
         // Kecepatan gerak maksimal
         double speedLimit = 6.5;
         
@@ -78,15 +77,9 @@ public class Player extends GameObject {
         double targetVelX = inputX * speedLimit;
         double targetVelY = inputY * speedLimit;
 
-        // Interpolasi perpindahan velocity agar mulus (Lerp)
-        velX += (targetVelX - velX) * 0.2;
-        velY += (targetVelY - velY) * 0.2;
-
-        exactX += velX;
-        exactY += velY;
-
-        x = (int) Math.round(exactX);
-        y = (int) Math.round(exactY);
+        // Interpolasi perpindahan velocity (Lerp) - 0.25 biar snappier
+        velX += (targetVelX - velX) * 0.25;
+        velY += (targetVelY - velY) * 0.25;
 
         // Animasi jalan
         if (Math.abs(velX) > 0.5 || Math.abs(velY) > 0.5)
@@ -95,11 +88,30 @@ public class Player extends GameObject {
             animTick = 0;
     }
 
-    public void rollback() {
-        exactX = prevX;
-        exactY = prevY;
-        x = prevX;
-        y = prevY;
+    // Gerak sumbu X secara terpisah (Sliding Physics)
+    public void applyMoveX() {
+        prevExactX = exactX;
+        exactX += velX;
+        x = (int) Math.round(exactX);
+    }
+
+    // Gerak sumbu Y secara terpisah (Sliding Physics)
+    public void applyMoveY() {
+        prevExactY = exactY;
+        exactY += velY;
+        y = (int) Math.round(exactY);
+    }
+
+    public void rollbackX() {
+        exactX = prevExactX;
+        x = (int) Math.round(exactX);
+        velX = 0;
+    }
+
+    public void rollbackY() {
+        exactY = prevExactY;
+        y = (int) Math.round(exactY);
+        velY = 0;
     }
 
     // 🔥 HITBOX (PAD LEBIH BESAR BIAR MUDAH LEWAT CELAH MEJA)

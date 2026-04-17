@@ -1,801 +1,652 @@
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
 package com.deadline;
 
-import javax.swing.*;
+import com.deadline.backend.ScoreService;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Font;
-import java.awt.Rectangle;
+import java.awt.Image;
 import java.awt.Point;
-import java.awt.BasicStroke;
-import java.awt.GradientPaint;
-import java.awt.RenderingHints;
 import java.awt.RadialGradientPaint;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.Image;
+import java.awt.image.ImageObserver;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.Random;
-
+import javax.swing.ImageIcon;
+import javax.swing.JPanel;
+import javax.swing.Timer;
 
 public class GamePanel extends JPanel implements ActionListener, KeyListener {
+   private static final int WIDTH = 800;
+   private static final int HEIGHT = 600;
+   private static final int WORLD_WIDTH = 8000;
+   private static final int WORLD_HEIGHT = 6000;
+   private static final int FPS = 60;
+   private int camX = 0;
+   private int camY = 0;
+   private Timer timer;
+   private Player player;
+   // Removed submissionDesks field
+   private List<Map<String, Object>> cachedTopScores = new ArrayList();
+   private List<Lecturer> lecturers;
+   private List<Assignment> assignments;
+   private List<Rectangle> obstacles;
+   private Random random = new Random();
+   private boolean isGameOver = false;
+   private Image deskImage;
+   private Image dosenTua;
+   private Image dosenMuda;
+   private Image dosenCewe;
+   private int survivalTime = 0;
+   private int ticks = 0;
+   private int collectedBooks = 0;
+   private int totalScore = 0;
+   private long gameStartTime;
+   private int currentPlayerId = -1;
+   private boolean up;
+   private boolean down;
+   private boolean left;
+   private boolean right;
+   private Rectangle btnMenu;
+   private Rectangle btnRetry;
 
-    // =========================
-    // SCREEN
-    // =========================
-    private static final int WIDTH = 800;
-    private static final int HEIGHT = 600;
-
-    // =========================
-    // WORLD (MAP SUPER LUAS - KAMPUS GEDUNG A)
-    // =========================
-    private static final int WORLD_WIDTH = 8000;
-    private static final int WORLD_HEIGHT = 6000;
-
-    private static final int FPS = 60;
-
-    // =========================
-    // CAMERA
-    // =========================
-    private int camX = 0;
-    private int camY = 0;
-
-    // =========================
-    // GAME OBJECT
-    // =========================
-    private Timer timer;
-    private Player player;
-    private List<SubmissionDesk> submissionDesks;
-   private List<Map<String, Object>> cachedTopScores = new ArrayList<>();
-    private List<Lecturer> lecturers;
-    private List<Assignment> assignments;
-    private List<Rectangle> obstacles;
-
-    private Random random = new Random();
-    private boolean isGameOver = false;
-
-    private Image deskImage;
-    private Image dosenTua;
-    private Image dosenMuda;
-    private Image dosenCewe;
-
-
-    // 🔥 SURVIVAL MODE
-    private int survivalTime = 0;
-    private int ticks = 0;
-    private int collectedBooks = 0;
-    private int totalScore = 0;
-    private long gameStartTime;
-    
-    // BACKEND INTEGRATION
-    private int currentPlayerId = -1;
-
-    // Movement
-    private boolean up, down, left, right;
-    
-    // UI Buttons bounds
-    private Rectangle btnMenu;
-    private Rectangle btnRetry;
-
-    public GamePanel() {
-        setPreferredSize(new Dimension(WIDTH, HEIGHT));
-        setFocusable(true);
-        addKeyListener(this);
-
-        addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                Point p = e.getPoint();
-                if (isGameOver) {
-                    if (btnRetry != null && btnRetry.contains(p)) {
-                        initGame();
-                    } else if (btnMenu != null && btnMenu.contains(p)) {
-                        Main.switchPage(Main.DASHBOARD);
-                    }
-                }
+   public GamePanel() {
+      this.setPreferredSize(new Dimension(800, 600));
+      this.setFocusable(true);
+      this.addKeyListener(this);
+      this.addMouseListener(new MouseAdapter() {
+         public void mousePressed(MouseEvent e) {
+            Point p = e.getPoint();
+            if (GamePanel.this.isGameOver) {
+               if (GamePanel.this.btnRetry != null && GamePanel.this.btnRetry.contains(p)) {
+                  GamePanel.this.initGame();
+               } else if (GamePanel.this.btnMenu != null && GamePanel.this.btnMenu.contains(p)) {
+                  Main.switchPage("DASHBOARD");
+               }
             }
-        });
 
-        initGame();
+         }
+      });
+      this.initGame();
 
-        // Load Asset
-        try {
-            deskImage = new ImageIcon(getClass().getResource("/assets/meja.png")).getImage();
-            
-            // 1. LOAD SEMUA IMAGE (DI CONSTRUCTOR, SEKALI SAJA)
-            dosenTua = new ImageIcon(getClass().getResource("/assets/avatar_3_dosen.png")).getImage();
-            dosenMuda = new ImageIcon(getClass().getResource("/assets/d.png")).getImage();
-            dosenCewe = new ImageIcon(getClass().getResource("/assets/dc.png")).getImage();
-            
-        } catch (Exception e) {
-            System.err.println("Gagal load assets (meja/dosen) ❌");
-        }
+      try {
+         this.deskImage = (new ImageIcon(this.getClass().getResource("/assets/meja.png"))).getImage();
+         this.dosenTua = (new ImageIcon(this.getClass().getResource("/assets/avatar_3_dosen.png"))).getImage();
+         this.dosenMuda = (new ImageIcon(this.getClass().getResource("/assets/d.png"))).getImage();
+         this.dosenCewe = (new ImageIcon(this.getClass().getResource("/assets/dc.png"))).getImage();
+      } catch (Exception var2) {
+         System.err.println("Gagal load assets (meja/dosen) ❌");
+      }
 
-        timer = new Timer(1000 / FPS, this);
-        timer.start();
+      this.timer = new Timer(16, this);
+      this.timer.start();
+      System.out.println("GAME PANEL 8000x6000 SURVIVAL VERSION KELOAD ✅");
+   }
 
-        System.out.println("GAME PANEL 8000x6000 SURVIVAL VERSION KELOAD ✅");
-    }
+   public void resetGame(int playerId, String playerName, String avatarPath) {
+      this.currentPlayerId = playerId;
+      this.up = false;
+      this.down = false;
+      this.left = false;
+      this.right = false;
+      this.player = new Player(4000, 3000);
+      this.player.setName(playerName);
+      this.player.setAvatar(avatarPath);
+      this.initGame();
+   }
 
-    public void resetGame(int playerId, String playerName, String avatarPath) {
-        this.currentPlayerId = playerId;
-        // Reset state
-        up = false; down = false; left = false; right = false;
+   private void initGame() {
+      this.isGameOver = false;
+      this.survivalTime = 0;
+      this.ticks = 0;
+      this.collectedBooks = 0;
+      this.totalScore = 0;
+      this.gameStartTime = System.currentTimeMillis();
+      if (this.player == null) {
+         this.player = new Player(4000, 3000);
+         this.player.setAvatar("/assets/avatar_1_cowo.png");
+      }
 
-        // Reset entities
-        player = new Player(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
-        player.setName(playerName);
-        player.setAvatar(avatarPath);
+      this.lecturers = new ArrayList();
+      this.assignments = new ArrayList();
+      this.initObstacles();
+      boolean safe = false;
+      int attempts = 0;
+      int spawnX = 4000;
+      int spawnY = 3000;
 
-        initGame();
-    }
+      while(!safe && attempts < 100) {
+         this.player.setX(spawnX);
+         this.player.setY(spawnY);
+         safe = true;
 
-   // =========================
-    // INIT GAME
-    // =========================
-    private void initGame() {
-        isGameOver = false;
-        survivalTime = 0;
-        ticks = 0;
-        collectedBooks = 0;
-        totalScore = 0;
-        gameStartTime = System.currentTimeMillis();
-
-        if (player == null) {
-            player = new Player(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
-            player.setAvatar("/assets/avatar_1_cowo.png");
-        }
-
-        lecturers = new ArrayList<>();
-        assignments = new ArrayList<>();
-        submissionDesks = new ArrayList<>();
-        initObstacles();
-
-        // 🔥 SAFETY SPAWN: Cari lokasi kosong untuk player agar tidak nyangkut saat mulai
-        boolean safe = false;
-        int attempts = 0;
-        int spawnX = WORLD_WIDTH / 2;
-        int spawnY = WORLD_HEIGHT / 2;
-        
-        while (!safe && attempts < 100) {
-            player.setX(spawnX);
-            player.setY(spawnY);
-            safe = true;
-            for (Rectangle r : obstacles) {
-                if (player.getBounds().intersects(r)) {
-                    safe = false;
-                    spawnX = random.nextInt(WORLD_WIDTH - 500) + 250;
-                    spawnY = random.nextInt(WORLD_HEIGHT - 500) + 250;
-                    attempts++;
-                    break;
-                }
+         for(Rectangle r : this.obstacles) {
+            if (this.player.getBounds().intersects(r)) {
+               safe = false;
+               spawnX = this.random.nextInt(7500) + 250;
+               spawnY = this.random.nextInt(5500) + 250;
+               ++attempts;
+               break;
             }
-        }
-        player.resetCarriedAssignments();
+         }
+      }
 
-        // Spawn lecturers (Awal game di map luas: 6 dosen)
-        for (int i = 0; i < 6; i++) {
-            spawnLecturer();
-        }
+      this.player.resetCarriedAssignments();
+      this.player.setCollectedBooks(0);
+      this.lecturers.clear();
 
-        // Spawn assignments (Seebarkan buku lebih banyak di map luas)
-        for (int i = 0; i < 50; i++) {
-            spawnAssignment();
-        }
-    }
+      for(int i = 0; i < 50; ++i) {
+         this.spawnAssignment();
+      }
 
-    private void spawnLecturer() {
-        // 4. DOSEN MAKIN CEPAT (BASE)
-        double baseSpeed = 1.5 + (collectedBooks * 0.2);
-        baseSpeed = Math.min(baseSpeed, 5.0);
+   }
 
-        // 2. RANDOM TIPE DOSEN SAAT SPAWN
-        Image selectedImage;
-        int rand = random.nextInt(3);
-        double finalSpeed = baseSpeed;
+   private void spawnLecturer() {
+      int books = this.player.getCollectedBooks();
+      double speed = 2.0;
+      if (books >= 10) {
+         speed = 2.0 + (double)(books - 9) * 0.2;
+         speed = Math.min(speed, 5.0);
+      }
 
-        if (rand == 0) {
-            selectedImage = dosenTua;
-            finalSpeed -= 0.5; // Tua: Gerak Lambat
-        } else if (rand == 1) {
-            selectedImage = dosenMuda;
-            finalSpeed += 0.5; // Muda: Gerak Cepat
-        } else {
-            selectedImage = dosenCewe;
-            // Cewek: Gerak Sedang (Base)
-        }
+      int rand = this.random.nextInt(3);
+      Image selectedImage = (rand == 0) ? this.dosenTua : (rand == 1 ? this.dosenMuda : this.dosenCewe);
 
-        lecturers.add(new Lecturer(
-                random.nextInt(WORLD_WIDTH),
-                random.nextInt(WORLD_HEIGHT),
-                finalSpeed,
-                selectedImage));
-    }
+      int sx, sy;
+      int side = this.random.nextInt(4);
+      int padding = 150;
 
-    private void initObstacles() {
-        obstacles = new ArrayList<>();
-        submissionDesks = new ArrayList<>();
-        int wallThin = 60;
+      if (side == 0) { // Top
+         sx = this.camX + this.random.nextInt(800);
+         sy = this.camY - padding;
+      } else if (side == 1) { // Bottom
+         sx = this.camX + this.random.nextInt(800);
+         sy = this.camY + 600 + padding;
+      } else if (side == 2) { // Left
+         sx = this.camX - padding;
+         sy = this.camY + this.random.nextInt(600);
+      } else { // Right
+         sx = this.camX + 800 + padding;
+         sy = this.camY + this.random.nextInt(600);
+      }
 
-        // 1. BOUNDARY WALLS (Tembok Luar Kampus)
-        obstacles.add(new Rectangle(0, 0, WORLD_WIDTH, wallThin));
-        obstacles.add(new Rectangle(0, WORLD_HEIGHT - wallThin, WORLD_WIDTH, wallThin));
-        obstacles.add(new Rectangle(0, 0, wallThin, WORLD_HEIGHT));
-        obstacles.add(new Rectangle(WORLD_WIDTH - wallThin, 0, wallThin, WORLD_HEIGHT));
+      // Constrain to world bounds
+      sx = Math.max(0, Math.min(sx, 7840));
+      sy = Math.max(0, Math.min(sy, 5840));
 
-        // 2. CENTRAL CORRIDOR (Lorong Utama)
-        // Horizontal Corridor in the middle
-        int corridorY = WORLD_HEIGHT / 2 - 250;
-        int corridorH = 500;
-        // Tembok lorong atas & bawah dengan celah pintu
-        for (int x = 0; x < WORLD_WIDTH; x += 1000) {
-            // Celah pintu tiap 1000px
-            obstacles.add(new Rectangle(x, corridorY, 800, wallThin));
-            obstacles.add(new Rectangle(x, corridorY + corridorH, 800, wallThin));
-        }
+      this.lecturers.add(new Lecturer(sx, sy, speed, selectedImage));
+   }
 
-        // 3. CLASSROOMS (Ruangan-Ruangan)
-        // Kita bagi map jadi 8 ruangan besar (4 atas, 4 bawah)
-        int roomW = WORLD_WIDTH / 4;
-        int roomH = (WORLD_HEIGHT - corridorH) / 2;
+   private void initObstacles() {
+      this.obstacles = new ArrayList();
+      int wallThin = 60;
+      this.obstacles.add(new Rectangle(0, 0, 8000, wallThin));
+      this.obstacles.add(new Rectangle(0, 6000 - wallThin, 8000, wallThin));
+      this.obstacles.add(new Rectangle(0, 0, wallThin, 6000));
+      this.obstacles.add(new Rectangle(8000 - wallThin, 0, wallThin, 6000));
+      int corridorY = 2750;
+      int corridorH = 500;
 
-        for (int row = 0; row < 2; row++) {
-            for (int col = 0; col < 4; col++) {
-                int startX = col * roomW;
-                int startY = (row == 0) ? 0 : corridorY + corridorH;
+      for(int x = 0; x < 8000; x += 1000) {
+         this.obstacles.add(new Rectangle(x, corridorY, 800, wallThin));
+         this.obstacles.add(new Rectangle(x, corridorY + corridorH, 800, wallThin));
+      }
 
-                // Tembok pemisah antar kelas (vertical)
-                if (col > 0) {
-                    obstacles.add(new Rectangle(startX, startY, wallThin, roomH));
-                }
+      int roomW = 2000;
+      int roomH = (6000 - corridorH) / 2;
 
-                // ISI KELAS (Meja & Kursi)
-                generateRoomDecor(startX + 150, startY + 150, roomW - 300, roomH - 350);
-                
-                // SUBMISSION DESK (Satu di tiap ruangan atau tiap 2 ruangan)
-                if ((row + col) % 2 == 0) {
-                    int deskX = startX + roomW / 2 - 150;
-                    int deskY = startY + (row == 0 ? 100 : roomH - 200);
-                    Rectangle sdRect = new Rectangle(deskX, deskY, 300, 100);
-                    obstacles.add(sdRect);
-                    submissionDesks.add(new SubmissionDesk(deskX, deskY));
-                }
+      for(int row = 0; row < 2; ++row) {
+         for(int col = 0; col < 4; ++col) {
+            int startX = col * roomW;
+            int startY = row == 0 ? 0 : corridorY + corridorH;
+            if (col > 0) {
+               this.obstacles.add(new Rectangle(startX, startY, wallThin, roomH));
             }
-        }
 
-        // 4. FURNITURE TAMBAHAN DI LORONG (Lemari & Bangku)
-        for (int x = 500; x < WORLD_WIDTH; x += 1500) {
-            // Lemari di lorong
-            obstacles.add(new Rectangle(x, corridorY + 100, 150, 80));
-            // Bangku di sisi lain
-            obstacles.add(new Rectangle(x + 400, corridorY + corridorH - 180, 200, 60));
-        }
-    }
-
-    private void generateRoomDecor(int x, int y, int w, int h) {
-        int mejaWidth = 100;
-        int mejaHeight = 80;
-        int spacingX = 350;
-        int spacingY = 250;
-
-        // Pola Meja Mahasiswa
-        for (int curY = y + 100; curY < y + h - 100; curY += spacingY) {
-            for (int curX = x; curX < x + w - 100; curX += spacingX) {
-                obstacles.add(new Rectangle(curX, curY, mejaWidth, mejaHeight));
+            this.generateRoomDecor(startX + 150, startY + 150, roomW - 300, roomH - 350);
+            if ((row + col) % 2 == 0) {
+               // Removed SubmissionDesk logic
             }
-        }
+         }
+      }
 
-        // Meja Dosen / Podium di depan kelas
-        obstacles.add(new Rectangle(x + w / 2 - 100, y, 200, 80));
-        
-        // Lemari di pojok kelas
-        obstacles.add(new Rectangle(x, y, 80, 150));
-        obstacles.add(new Rectangle(x + w - 80, y + h - 150, 80, 150));
-    }
+      for(int x = 500; x < 8000; x += 1500) {
+         this.obstacles.add(new Rectangle(x, corridorY + 100, 150, 80));
+         this.obstacles.add(new Rectangle(x + 400, corridorY + corridorH - 180, 200, 60));
+      }
+
+   }
+
+   private void generateRoomDecor(int x, int y, int w, int h) {
+      int mejaWidth = 100;
+      int mejaHeight = 80;
+      int spacingX = 350;
+      int spacingY = 250;
+
+      for(int curY = y + 100; curY < y + h - 100; curY += spacingY) {
+         for(int curX = x; curX < x + w - 100; curX += spacingX) {
+            this.obstacles.add(new Rectangle(curX, curY, mejaWidth, mejaHeight));
+         }
+      }
+
+      this.obstacles.add(new Rectangle(x + w / 2 - 100, y, 200, 80));
+      this.obstacles.add(new Rectangle(x, y, 80, 150));
+      this.obstacles.add(new Rectangle(x + w - 80, y + h - 150, 80, 150));
+   }
 
    private void loadLeaderboardFromDB() {
-    com.deadline.backend.ScoreService ss = new com.deadline.backend.ScoreService();
-    cachedTopScores = ss.getTopScores(5);
-}
+      ScoreService ss = new ScoreService();
+      this.cachedTopScores = ss.getTopScores(5);
+   }
 
-    private void spawnAssignment() {
-        Assignment a;
-        boolean overlap;
-        do {
-            overlap = false;
-            a = new Assignment(
-                    random.nextInt(WORLD_WIDTH - 100) + 50,
-                    random.nextInt(WORLD_HEIGHT - 100) + 50);
-            Rectangle areaCek = new Rectangle(a.getX() - 15, a.getY() - 15, a.getWidth() + 30, a.getHeight() + 30);
-            for (Rectangle r : obstacles) {
-                if (areaCek.intersects(r)) {
-                    overlap = true;
-                    break;
-                }
+   private void spawnAssignment() {
+      Assignment a;
+      boolean overlap;
+      do {
+         overlap = false;
+         a = new Assignment(this.random.nextInt(7900) + 50, this.random.nextInt(5900) + 50);
+         Rectangle areaCek = new Rectangle(a.getX() - 15, a.getY() - 15, a.getWidth() + 30, a.getHeight() + 30);
+
+         for(Rectangle r : this.obstacles) {
+            if (areaCek.intersects(r)) {
+               overlap = true;
+               break;
             }
-        } while (overlap);
-        assignments.add(a);
-    }
+         }
+      } while(overlap);
 
-    // =========================
-    // GAME LOOP
-    // =========================
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        updateGame();
-        repaint();
-    }
+      this.assignments.add(a);
+   }
 
-    private void updateGame() {
-        if (isGameOver) {
-            return;
-        }
+   public void actionPerformed(ActionEvent e) {
+      this.updateGame();
+      this.repaint();
+   }
 
-        // ⏱️ 1. WAKTU MAJU (SURVIVAL TIME)
-        ticks++;
-        if (ticks % FPS == 0) {
-            survivalTime++;
-            totalScore = survivalTime + (collectedBooks * 10);
-        }
+   private void updateGame() {
+      if (!this.isGameOver) {
+         ++this.ticks;
+         if (this.ticks % 60 == 0) {
+            ++this.survivalTime;
+            this.totalScore = this.survivalTime + this.collectedBooks * 10;
+         }
 
-        // 👨‍🏫 2. SPAWN DOSEN BERTAHAP (LEBIH CEPAT)
-        int spawnDelay = Math.max(20, FPS * (2 - collectedBooks / 10));
-        
-        // 3. PERBANYAK DOSEN (MAKIN AGRESIF)
-        int maxLecturers = 6 + (collectedBooks);
+         int books = this.player.getCollectedBooks();
+         int maxLecturers = 10;
+         double currentSpeed = 2.0;
+         if (books >= 10) {
+            currentSpeed = 2.0 + (double)(books - 9) * 0.2;
+            currentSpeed = Math.min(currentSpeed, 5.0);
+         }
 
-        if (ticks % spawnDelay == 0 && lecturers.size() < maxLecturers) {
-            spawnLecturer();
-        }
+         while (this.lecturers.size() < books && this.lecturers.size() < maxLecturers) {
+            this.spawnLecturer();
+         }
 
-        // Movement
-        int dx = 0, dy = 0;
-        if (up)
-            dy--;
-        if (down)
-            dy++;
-        if (left)
-            dx--;
-        if (right)
-            dx++;
+         for (Lecturer l : this.lecturers) {
+            l.setSpeed(currentSpeed);
+         }
 
-        player.setDirection(dx, dy);
-        player.update(); // Hitung velocity
+         int dx = 0;
+         int dy = 0;
+         if (this.up) {
+            --dy;
+         }
 
-        // --- STEP movement X (Sliding Collision) ---
-        player.applyMoveX();
-        // Batas map X
-        if (player.getX() < 0 || player.getX() > WORLD_WIDTH - player.getWidth()) {
-            player.rollbackX();
-        }
-        // Collide obstacles X
-        for (Rectangle rect : obstacles) {
-            if (player.getBounds().intersects(rect)) {
-                player.rollbackX();
-                break;
+         if (this.down) {
+            ++dy;
+         }
+
+         if (this.left) {
+            --dx;
+         }
+
+         if (this.right) {
+            ++dx;
+         }
+
+         this.player.setDirection(dx, dy);
+         this.player.update();
+         this.player.applyMoveX();
+         if (this.player.getX() < 0 || this.player.getX() > 8000 - this.player.getWidth()) {
+            this.player.rollbackX();
+         }
+
+         for(Rectangle rect : this.obstacles) {
+            if (this.player.getBounds().intersects(rect)) {
+               this.player.rollbackX();
+               break;
             }
-        }
+         }
 
-        // --- STEP movement Y (Sliding Collision) ---
-        player.applyMoveY();
-        // Batas map Y
-        if (player.getY() < 0 || player.getY() > WORLD_HEIGHT - player.getHeight()) {
-            player.rollbackY();
-        }
-        // Collide obstacles Y
-        for (Rectangle rect : obstacles) {
-            if (player.getBounds().intersects(rect)) {
-                player.rollbackY();
-                break;
+         this.player.applyMoveY();
+         if (this.player.getY() < 0 || this.player.getY() > 6000 - this.player.getHeight()) {
+            this.player.rollbackY();
+         }
+
+         for(Rectangle rect : this.obstacles) {
+            if (this.player.getBounds().intersects(rect)) {
+               this.player.rollbackY();
+               break;
             }
-        }
+         }
 
-        // Dosen AI
-        for (Lecturer l : lecturers) {
-            l.updateAI(player, lecturers);
-
-            if (l.intersects(player)) {
-                System.out.println("KETANGKAP DOSEN 💀");
-                isGameOver = true;
-
-                saveFinalScore();        // simpan ke MySQL
-                loadLeaderboardFromDB(); // ambil leaderboard dari DB
+         for(Lecturer l : this.lecturers) {
+            l.updateAI(this.player, this.lecturers);
+            if (l.intersects(this.player)) {
+               System.out.println("KETANGKAP DOSEN \ud83d\udc80");
+               this.isGameOver = true;
+               this.saveFinalScore();
+               this.loadLeaderboardFromDB();
             }
-        }
+         }
 
-        // Ambil buku (Bonus Score)
-        for (int i = 0; i < assignments.size(); i++) {
-            Assignment a = assignments.get(i);
-            if (player.intersects(a)) {
-                collectedBooks++;
-                totalScore = survivalTime + (collectedBooks * 10);
-                assignments.remove(i);
-                
-                // BACKEND: Record submission via SubmissionDesk if needed, 
-                // but since GamePanel gives score instantly, we just record task submission.
-                if (currentPlayerId != -1 && !submissionDesks.isEmpty()) {
-                    submissionDesks.get(0).processSubmission(currentPlayerId, "Collected Assignment " + collectedBooks, "SUCCESS");
-                }
-                
-                // Update semua kecepatan dosen saat ini sesuai tipenya
-                for (Lecturer l : lecturers) {
-                    double baseSpeed = 1.5 + (collectedBooks * 0.2);
-                    baseSpeed = Math.min(baseSpeed, 5.0);
-                    
-                    double finalSpeed = baseSpeed;
-                    if (l.getImage() == dosenTua) finalSpeed -= 0.5;
-                    else if (l.getImage() == dosenMuda) finalSpeed += 0.5;
-                    
-                    l.setSpeed(finalSpeed);
-                }
+         for(int i = 0; i < this.assignments.size(); ++i) {
+            Assignment a = (Assignment)this.assignments.get(i);
+            if (this.player.intersects(a)) {
+               this.player.incrementCollectedBooks();
+               this.collectedBooks = this.player.getCollectedBooks();
+               this.totalScore = this.survivalTime + this.collectedBooks * 10;
+               this.assignments.remove(i);
+               // Removed desk submission processing
 
-                // Spawn buku baru supaya di map tetap ada buku untuk diambil
-                spawnAssignment();
-                i--;
+               this.spawnAssignment();
+               --i;
             }
-        }
+         }
 
-        // Kamera follow player
-        camX = player.getX() - WIDTH / 2;
-        camY = player.getY() - HEIGHT / 2;
+         this.camX = this.player.getX() - 400;
+         this.camY = this.player.getY() - 300;
+         this.camX = Math.max(0, Math.min(this.camX, 7200));
+         this.camY = Math.max(0, Math.min(this.camY, 5400));
+      }
+   }
 
-        camX = Math.max(0, Math.min(camX, WORLD_WIDTH - WIDTH));
-        camY = Math.max(0, Math.min(camY, WORLD_HEIGHT - HEIGHT));
-    }
+   protected void paintComponent(Graphics g) {
+      super.paintComponent(g);
+      Graphics2D g2 = (Graphics2D)g;
+      g2.translate(-this.camX, -this.camY);
+      g2.setColor(new Color(230, 230, 235));
+      g2.fillRect(0, 0, 8000, 6000);
+      g2.setColor(new Color(0, 0, 0, 15));
 
-    // =========================
-    // RENDER
-    // =========================
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g;
+      for(int x = 0; x < 8000; x += 100) {
+         g2.drawLine(x, 0, x, 6000);
+      }
 
-        // Camera
-        g2.translate(-camX, -camY);
+      for(int y = 0; y < 6000; y += 100) {
+         g2.drawLine(0, y, 8000, y);
+      }
 
-        // Background - Lantai Kelas (Bersih & Elegan)
-        g2.setColor(new Color(230, 230, 235)); 
-        g2.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-        
-        // Garis ubin lantai yang tipis dan halus
-        g2.setColor(new Color(0, 0, 0, 15)); 
-        for (int x = 0; x < WORLD_WIDTH; x += 100) {
-            g2.drawLine(x, 0, x, WORLD_HEIGHT);
-        }
-        for (int y = 0; y < WORLD_HEIGHT; y += 100) {
-            g2.drawLine(0, y, WORLD_WIDTH, y);
-        }
-
-        // Obstacles (Meja & Tembok)
-        for (Rectangle rect : obstacles) {
-            boolean isWall = rect.width > 250 || rect.height > 250;
-            
-            if (isWall) {
-                // 🧱 TEMBOK / SEKAT (Solid & Tegas)
-                g2.setColor(new Color(40, 40, 45)); 
-                g2.fill(rect);
-                g2.setColor(new Color(60, 60, 70));
-                g2.setStroke(new BasicStroke(2));
-                g2.draw(rect);
-            } else if (rect.width == 300) {
-                // Meja Dosen (Submission Desk) di-skip karena digambar terpisah
+      for(Rectangle rect : this.obstacles) {
+         boolean isWall = rect.width > 250 || rect.height > 250;
+         if (isWall) {
+            g2.setColor(new Color(40, 40, 45));
+            g2.fill(rect);
+            g2.setColor(new Color(60, 60, 70));
+            g2.setStroke(new BasicStroke(2.0F));
+            g2.draw(rect);
+         } else if (rect.width != 300) {
+            g2.setColor(new Color(0, 0, 0, 30));
+            g2.fillRoundRect(rect.x + 5, rect.y + 10, rect.width, rect.height, 10, 10);
+            if (this.deskImage != null) {
+               g2.drawImage(this.deskImage, rect.x, rect.y, rect.width, rect.height, (ImageObserver)null);
             } else {
-                // 🪑 MEJA MAHASISWA (Pake Asset desk.png)
-                // Shadow tipis
-                g2.setColor(new Color(0, 0, 0, 30));
-                g2.fillRoundRect(rect.x + 5, rect.y + 10, rect.width, rect.height, 10, 10);
-                
-                if (deskImage != null) {
-                    g2.drawImage(deskImage, rect.x, rect.y, rect.width, rect.height, null);
-                } else {
-                    // Fallback jika gambar gagal load
-                    g2.setColor(new Color(121, 85, 72));
-                    g2.fillRoundRect(rect.x, rect.y, rect.width, rect.height - 10, 8, 8);
-                }
+               g2.setColor(new Color(121, 85, 72));
+               g2.fillRoundRect(rect.x, rect.y, rect.width, rect.height - 10, 8, 8);
             }
-        }
+         }
+      }
 
-        for (SubmissionDesk d : submissionDesks) {
-            d.draw(g2);
-        }
+      // Removed SubmissionDesk drawing
 
-        for (Assignment a : assignments)
-            a.draw(g2);
-        for (Lecturer l : lecturers)
-            l.draw(g2);
-        player.draw(g2);
+      for(Assignment a : this.assignments) {
+         a.draw(g2);
+      }
 
-        // Reset camera
-        g2.translate(camX, camY);
+      for(Lecturer l : this.lecturers) {
+         l.draw(g2);
+      }
 
-        drawUI(g2);
-    }
+      this.player.draw(g2);
+      g2.translate(this.camX, this.camY);
+      this.drawUI(g2);
+   }
 
-    private void updateButtonBounds() {
-        int panelW = getWidth();
-        int panelH = getHeight();
-        // Turunkan tombol agar di bawah leaderboard
-        int btnY = panelH / 2 + 160; 
-        btnRetry = new Rectangle(panelW / 2 - 210, btnY, 200, 50);
-        btnMenu = new Rectangle(panelW / 2 + 10, btnY, 200, 50);
-    }
+   private void updateButtonBounds() {
+      int panelW = this.getWidth();
+      int panelH = this.getHeight();
+      int btnY = panelH / 2 + 160;
+      this.btnRetry = new Rectangle(panelW / 2 - 210, btnY, 200, 50);
+      this.btnMenu = new Rectangle(panelW / 2 + 10, btnY, 200, 50);
+   }
 
-    private void drawButton(Graphics2D g2, String text, Rectangle rect, Color bgColor) {
-        // Shadow/Glow
-        g2.setColor(new Color(0, 0, 0, 100));
-        g2.fillRoundRect(rect.x + 3, rect.y + 3, rect.width, rect.height, 15, 15);
+   private void drawButton(Graphics2D g2, String text, Rectangle rect, Color bgColor) {
+      g2.setColor(new Color(0, 0, 0, 100));
+      g2.fillRoundRect(rect.x + 3, rect.y + 3, rect.width, rect.height, 15, 15);
+      GradientPaint gp = new GradientPaint((float)rect.x, (float)rect.y, bgColor, (float)rect.x, (float)(rect.y + rect.height), bgColor.darker());
+      g2.setPaint(gp);
+      g2.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 15, 15);
+      g2.setColor(new Color(255, 255, 255, 100));
+      g2.setStroke(new BasicStroke(2.0F));
+      g2.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 15, 15);
+      g2.setFont(new Font("Segoe UI", 1, 18));
+      int tw = g2.getFontMetrics().stringWidth(text);
+      g2.setColor(Color.WHITE);
+      g2.drawString(text, rect.x + (rect.width - tw) / 2, rect.y + 32);
+   }
 
-        // Gradient Background
-        GradientPaint gp = new GradientPaint(rect.x, rect.y, bgColor, rect.x, rect.y + rect.height, bgColor.darker());
-        g2.setPaint(gp);
-        g2.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 15, 15);
-        
-        // Border
-        g2.setColor(new Color(255, 255, 255, 100));
-        g2.setStroke(new BasicStroke(2));
-        g2.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 15, 15);
-        
-        // Text
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        int tw = g2.getFontMetrics().stringWidth(text);
-        g2.setColor(Color.WHITE);
-        g2.drawString(text, rect.x + (rect.width - tw) / 2, rect.y + 32);
-    }
+   private void drawUI(Graphics2D g2) {
+      int panelW = this.getWidth();
+      int panelH = this.getHeight();
+      int hudW = 350;
+      int hudH = 100;
+      int hudX = 25;
+      int hudY = 25;
+      boolean danger = this.collectedBooks >= 10;
 
-    private void drawUI(Graphics2D g2) {
-        int panelW = getWidth();
-        int panelH = getHeight();
-        
-        // --- 💎 MODERN GLASS HUD ---
-        int hudW = 350;
-        int hudH = 100;
-        int hudX = 25;
-        int hudY = 25;
+      g2.setColor(new Color(0, 0, 0, 50));
+      g2.fillRoundRect(hudX - 2, hudY - 2, hudW + 4, hudH + 4, 20, 20);
+      
+      Color hudColor = danger ? new Color(80, 0, 0, 220) : new Color(20, 20, 25, 200);
+      g2.setColor(hudColor);
+      g2.fillRoundRect(hudX, hudY, hudW, hudH, 20, 20);
+      
+      g2.setColor(new Color(255, 255, 255, 30));
+      g2.fillRoundRect(hudX, hudY, hudW, 35, 20, 20);
+      g2.fillRect(hudX, hudY + 20, hudW, 15);
+      
+      Color borderColor = danger ? new Color(255, 50, 50, 150) : new Color(255, 255, 255, 60);
+      g2.setColor(borderColor);
+      g2.setStroke(new BasicStroke(danger ? 3.0F : 1.5F));
+      g2.drawRoundRect(hudX, hudY, hudW, hudH, 20, 20);
 
-        // Outer Glow/Shadow
-        g2.setColor(new Color(0, 0, 0, 50));
-        g2.fillRoundRect(hudX - 2, hudY - 2, hudW + 4, hudH + 4, 20, 20);
+      if (danger) {
+         g2.setColor(new Color(255, 255, 255, 200));
+         g2.setFont(new Font("Segoe UI", 1, 14));
+         String msg = "⚠️ DANGER MODE: DOSEN MENGEJAR!";
+         g2.drawString(msg, hudX + 20, hudY - 10);
+      }
+      g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+      g2.setFont(new Font("Segoe UI", 1, 16));
+      g2.setColor(new Color(180, 200, 255));
+      g2.drawString("\ud83d\udccd SURVIVOR: " + this.player.getName().toUpperCase(), hudX + 20, hudY + 25);
+      g2.setFont(new Font("Segoe UI Semibold", 0, 18));
+      g2.setColor(Color.WHITE);
+      g2.drawString("⏱️ SURVIVED", hudX + 20, hudY + 58);
+      g2.setFont(new Font("Segoe UI", 1, 22));
+      g2.setColor(new Color(0, 255, 200));
+      g2.drawString(this.survivalTime + "s", hudX + 150, hudY + 59);
+      g2.setFont(new Font("Segoe UI Semibold", 0, 18));
+      g2.setColor(Color.WHITE);
+      g2.drawString("\ud83d\udcda BOOKS", hudX + 20, hudY + 85);
+      g2.setFont(new Font("Segoe UI", 1, 22));
+      g2.setColor(new Color(255, 215, 0));
+      g2.drawString(String.valueOf(this.collectedBooks), hudX + 150, hudY + 86);
+      int badgeW = 100;
+      int badgeH = 50;
+      int badgeX = hudX + hudW - badgeW - 15;
+      int badgeY = hudY + (hudH - badgeH) / 2 + 5;
+      g2.setColor(new Color(255, 255, 255, 20));
+      g2.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
+      g2.setColor(new Color(255, 255, 255, 80));
+      g2.drawRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
+      g2.setFont(new Font("Segoe UI", 1, 12));
+      g2.setColor(new Color(200, 200, 200));
+      g2.drawString("SCORE", badgeX + (badgeW - g2.getFontMetrics().stringWidth("SCORE")) / 2, badgeY + 18);
+      g2.setFont(new Font("Impact", 0, 24));
+      g2.setColor(Color.WHITE);
+      String scoreStr = String.valueOf(this.totalScore);
+      g2.drawString(scoreStr, badgeX + (badgeW - g2.getFontMetrics().stringWidth(scoreStr)) / 2, badgeY + 42);
+      if (this.isGameOver) {
+         this.updateButtonBounds();
+         g2.setColor(new Color(15, 5, 5, 220));
+         g2.fillRect(0, 0, panelW, panelH);
+         RadialGradientPaint rgp = new RadialGradientPaint(new Point(panelW / 2, panelH / 2), (float)panelW, new float[]{0.0F, 1.0F}, new Color[]{new Color(100, 0, 0, 0), new Color(50, 0, 0, 150)});
+         g2.setPaint(rgp);
+         g2.fillRect(0, 0, panelW, panelH);
+         g2.setFont(new Font("Impact", 0, 100));
+         String overText = "GAME OVER";
+         int textWidth = g2.getFontMetrics().stringWidth(overText);
+         g2.setColor(new Color(0, 0, 0, 150));
+         g2.drawString(overText, (panelW - textWidth) / 2 + 5, panelH / 2 - 125);
+         g2.setColor(new Color(255, 50, 50));
+         g2.drawString(overText, (panelW - textWidth) / 2, panelH / 2 - 130);
+         g2.setColor(Color.WHITE);
+         g2.setFont(new Font("Segoe UI Light", 0, 28));
+         String subText = "Yahh, telat submit tugas";
+         int subWidth = g2.getFontMetrics().stringWidth(subText);
+         g2.drawString(subText, (panelW - subWidth) / 2, panelH / 2 - 80);
+         if (this.cachedTopScores != null) {
+            int lbW = 400;
+            int lbH = 220;
+            int lbX = (panelW - lbW) / 2;
+            int lbY = panelH / 2 - 40;
+            g2.setColor(new Color(255, 255, 255, 15));
+            g2.fillRoundRect(lbX, lbY, lbW, lbH, 15, 15);
+            g2.setColor(new Color(255, 255, 255, 40));
+            g2.drawRoundRect(lbX, lbY, lbW, lbH, 15, 15);
+            g2.setFont(new Font("Segoe UI", 1, 16));
+            g2.setColor(new Color(150, 150, 180));
+            g2.drawString("TOP SURVIVORS", lbX + 20, lbY + 30);
+            int entryY = lbY + 65;
 
-        // Glass Body
-        g2.setColor(new Color(20, 20, 25, 200));
-        g2.fillRoundRect(hudX, hudY, hudW, hudH, 20, 20);
-        
-        // Top Highlight
-        g2.setColor(new Color(255, 255, 255, 30));
-        g2.fillRoundRect(hudX, hudY, hudW, 35, 20, 20);
-        g2.fillRect(hudX, hudY + 20, hudW, 15); // Flatten bottom of top round
+            for(int i = 0; i < Math.min(this.cachedTopScores.size(), 5); ++i) {
+               Map<String, Object> ps = (Map)this.cachedTopScores.get(i);
+               String name = (String)ps.get("username");
+               int score = (Integer)ps.get("score");
+               boolean isCurrent = name.equalsIgnoreCase(this.player.getName()) && score == this.totalScore;
+               if (i == 0) {
+                  g2.setColor(new Color(255, 215, 0, 40));
+                  g2.fillRoundRect(lbX + 10, entryY - 22, lbW - 20, 30, 8, 8);
+               }
 
-        // Border
-        g2.setColor(new Color(255, 255, 255, 60));
-        g2.setStroke(new BasicStroke(1.5f));
-        g2.drawRoundRect(hudX, hudY, hudW, hudH, 20, 20);
+               if (isCurrent) {
+                  g2.setColor(new Color(0, 255, 150));
+                  g2.setFont(new Font("Segoe UI", 1, 18));
+               } else {
+                  g2.setColor(Color.WHITE);
+                  g2.setFont(new Font("Segoe UI", 0, 18));
+               }
 
-        // Styling teks
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        
-        // Player Name (Header)
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        g2.setColor(new Color(180, 200, 255));
-        g2.drawString("📍 SURVIVOR: " + player.getName().toUpperCase(), hudX + 20, hudY + 25);
-
-        // Stats
-        g2.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 18));
-        g2.setColor(Color.WHITE);
-        g2.drawString("⏱️ SURVIVED", hudX + 20, hudY + 58);
-        
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        g2.setColor(new Color(0, 255, 200));
-        g2.drawString(survivalTime + "s", hudX + 150, hudY + 59);
-
-        g2.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 18));
-        g2.setColor(Color.WHITE);
-        g2.drawString("📚 BOOKS", hudX + 20, hudY + 85);
-        
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        g2.setColor(new Color(255, 215, 0));
-        g2.drawString(String.valueOf(collectedBooks), hudX + 150, hudY + 86);
-
-        // Score Badge
-        int badgeW = 100;
-        int badgeH = 50;
-        int badgeX = hudX + hudW - badgeW - 15;
-        int badgeY = hudY + (hudH - badgeH) / 2 + 5;
-        
-        g2.setColor(new Color(255, 255, 255, 20));
-        g2.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
-        g2.setColor(new Color(255, 255, 255, 80));
-        g2.drawRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
-        
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        g2.setColor(new Color(200, 200, 200));
-        g2.drawString("SCORE", badgeX + (badgeW - g2.getFontMetrics().stringWidth("SCORE"))/2, badgeY + 18);
-        
-        g2.setFont(new Font("Impact", Font.PLAIN, 24));
-        g2.setColor(Color.WHITE);
-        String scoreStr = String.valueOf(totalScore);
-        g2.drawString(scoreStr, badgeX + (badgeW - g2.getFontMetrics().stringWidth(scoreStr))/2, badgeY + 42);
-
-        // --- 💀 GAME OVER SCREEN ---
-        if (isGameOver) {
-            updateButtonBounds();
-            
-            // Background Blur-ish Overlay
-            g2.setColor(new Color(15, 5, 5, 220));
-            g2.fillRect(0, 0, panelW, panelH);
-
-            // Red Vignette
-            RadialGradientPaint rgp = new RadialGradientPaint(
-                new Point(panelW / 2, panelH / 2),
-                panelW,
-                new float[]{0.0f, 1.0f},
-                new Color[]{new Color(100, 0, 0, 0), new Color(50, 0, 0, 150)}
-            );
-            g2.setPaint(rgp);
-            g2.fillRect(0, 0, panelW, panelH);
-
-            // Text Shadow
-            g2.setFont(new Font("Impact", Font.PLAIN, 100));
-            String overText = "GAME OVER";
-            int textWidth = g2.getFontMetrics().stringWidth(overText);
-            g2.setColor(new Color(0, 0, 0, 150));
-            g2.drawString(overText, (panelW - textWidth) / 2 + 5, panelH / 2 - 125);
-            
-            g2.setColor(new Color(255, 50, 50));
-            g2.drawString(overText, (panelW - textWidth) / 2, panelH / 2 - 130);
-            
-            g2.setColor(Color.WHITE);
-            g2.setFont(new Font("Segoe UI Light", Font.PLAIN, 28));
-            String subText = "Yahh, telat submit tugas";
-            int subWidth = g2.getFontMetrics().stringWidth(subText);
-            g2.drawString(subText, (panelW - subWidth) / 2, panelH / 2 - 80);
-            
-            // --- 🏆 EMBEDDED LEADERBOARD ---
-            if (cachedTopScores != null) {
-                int lbW = 400;
-                int lbH = 220;
-                int lbX = (panelW - lbW) / 2;
-                int lbY = panelH / 2 - 40;
-
-                // Glass Panel
-                g2.setColor(new Color(255, 255, 255, 15));
-                g2.fillRoundRect(lbX, lbY, lbW, lbH, 15, 15);
-                g2.setColor(new Color(255, 255, 255, 40));
-                g2.drawRoundRect(lbX, lbY, lbW, lbH, 15, 15);
-
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
-                g2.setColor(new Color(150, 150, 180));
-                g2.drawString("TOP SURVIVORS", lbX + 20, lbY + 30);
-
-                int entryY = lbY + 65;
-                for (int i = 0; i < Math.min(cachedTopScores.size(), 5); i++) {
-                  Map<String, Object> ps = cachedTopScores.get(i);
-
-                    String name = (String) ps.get("username");
-                    int score = (int) ps.get("score");
-                    boolean isCurrent = name.equalsIgnoreCase(player.getName()) && score == totalScore;
-
-                    // Rank 1 Glow Effect
-                    if (i == 0) {
-                        g2.setColor(new Color(255, 215, 0, 40));
-                        g2.fillRoundRect(lbX + 10, entryY - 22, lbW - 20, 30, 8, 8);
-                    }
-
-                    // Highlight Current Player
-                    if (isCurrent) {
-                        g2.setColor(new Color(0, 255, 150)); // Emerald/Green
-                        g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
-                    } else {
-                        g2.setColor(Color.WHITE);
-                        g2.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-                    }
-
-                    String rankText = "#" + (i + 1);
-                    g2.drawString(rankText, lbX + 20, entryY);
-                    g2.drawString(name, lbX + 60, entryY);
-                    
-                    String sText = String.valueOf(score);
-                    int sWidth = g2.getFontMetrics().stringWidth(sText);
-                    g2.drawString(sText, lbX + lbW - sWidth - 20, entryY);
-
-                    entryY += 35;
-                }
+               String rankText = "#" + (i + 1);
+               g2.drawString(rankText, lbX + 20, entryY);
+               g2.drawString(name, lbX + 60, entryY);
+               String sText = String.valueOf(score);
+               int sWidth = g2.getFontMetrics().stringWidth(sText);
+               g2.drawString(sText, lbX + lbW - sWidth - 20, entryY);
+               entryY += 35;
             }
-            
-            int btnY_real = panelH / 2 + 200;
-            btnRetry.y = btnY_real;
-            btnMenu.y = btnY_real;
-            
-            drawButton(g2, "COBA LAGI", btnRetry, new Color(180, 30, 30));
-            drawButton(g2, "KE MENU", btnMenu, new Color(40, 40, 45));
-        }
-    }
+         }
 
-    // =========================
-    // INPUT
-    // =========================
-    @Override
-    public void keyPressed(KeyEvent e) {
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_W:
-            case KeyEvent.VK_UP:
-                up = true;
-                break;
-            case KeyEvent.VK_S:
-            case KeyEvent.VK_DOWN:
-                down = true;
-                break;
-            case KeyEvent.VK_A:
-            case KeyEvent.VK_LEFT:
-                left = true;
-                break;
-            case KeyEvent.VK_D:
-            case KeyEvent.VK_RIGHT:
-                right = true;
-                break;
-            case KeyEvent.VK_ENTER:
-                // No more levels
-                break;
-            case KeyEvent.VK_B:
-                if (isGameOver) {
-                    Main.switchPage(Main.DASHBOARD);
-                }
-                break;
-            case KeyEvent.VK_R:
-                if (isGameOver) {
-                    initGame();
-                }
-                break;
-        }
-        
-    }
+         int btnY_real = panelH / 2 + 200;
+         this.btnRetry.y = btnY_real;
+         this.btnMenu.y = btnY_real;
+         this.drawButton(g2, "COBA LAGI", this.btnRetry, new Color(180, 30, 30));
+         this.drawButton(g2, "KE MENU", this.btnMenu, new Color(40, 40, 45));
+      }
 
-    private void saveFinalScore() {
-        int timePlayed = (int) ((System.currentTimeMillis() - gameStartTime) / 1000);
-        
-        // BACKEND: Save to database
-        if (currentPlayerId != -1) {
-            com.deadline.backend.ScoreService scoreService = new com.deadline.backend.ScoreService();
-            scoreService.saveScore(currentPlayerId, totalScore, timePlayed);
-        }
-        
-        // Use older LeaderboardManager for fallback/txt compatibility if we don't rewrite it.
-        LeaderboardManager.saveScore(player.getName(), totalScore, timePlayed);
-        
-        // Reset time start for restart
-        gameStartTime = System.currentTimeMillis();
-    }
+   }
 
-    @Override
-    public void keyReleased(KeyEvent e) {
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_W:
-            case KeyEvent.VK_UP:
-                up = false;
-                break;
-            case KeyEvent.VK_S:
-            case KeyEvent.VK_DOWN:
-                down = false;
-                break;
-            case KeyEvent.VK_A:
-            case KeyEvent.VK_LEFT:
-                left = false;
-                break;
-            case KeyEvent.VK_D:
-            case KeyEvent.VK_RIGHT:
-                right = false;
-                break;
-        }
-    }
+   public void keyPressed(KeyEvent e) {
+      switch (e.getKeyCode()) {
+         case 10:
+         default:
+            break;
+         case 37:
+         case 65:
+            this.left = true;
+            break;
+         case 38:
+         case 87:
+            this.up = true;
+            break;
+         case 39:
+         case 68:
+            this.right = true;
+            break;
+         case 40:
+         case 83:
+            this.down = true;
+            break;
+         case 66:
+            if (this.isGameOver) {
+               Main.switchPage("DASHBOARD");
+            }
+            break;
+         case 82:
+            if (this.isGameOver) {
+               this.initGame();
+            }
+      }
 
-    @Override
-    public void keyTyped(KeyEvent e) {
-    }
+   }
+
+   private void saveFinalScore() {
+      int timePlayed = (int)((System.currentTimeMillis() - this.gameStartTime) / 1000L);
+      if (this.currentPlayerId != -1) {
+         ScoreService scoreService = new ScoreService();
+         scoreService.saveScore(this.currentPlayerId, this.totalScore, timePlayed);
+      }
+
+      LeaderboardManager.saveScore(this.player.getName(), this.totalScore, timePlayed);
+      this.gameStartTime = System.currentTimeMillis();
+   }
+
+   public void keyReleased(KeyEvent e) {
+      switch (e.getKeyCode()) {
+         case 37:
+         case 65:
+            this.left = false;
+            break;
+         case 38:
+         case 87:
+            this.up = false;
+            break;
+         case 39:
+         case 68:
+            this.right = false;
+            break;
+         case 40:
+         case 83:
+            this.down = false;
+      }
+
+   }
+
+   public void keyTyped(KeyEvent e) {
+   }
 }

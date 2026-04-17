@@ -28,7 +28,7 @@ public class Main {
             frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
             // frame.setUndecorated(true); // aktifkan kalau mau tanpa border
 
-            frame.setLocationRelativeTo(null);
+            frame.setLocationRelativeTo(null);  
             frame.setResizable(true);
 
             cardLayout = new CardLayout();

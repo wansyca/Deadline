@@ -62,6 +62,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private boolean isGameOver = false;
 
     private Image deskImage;
+    private Image dosenTua;
+    private Image dosenMuda;
+    private Image dosenCewe;
+
 
     // 🔥 SURVIVAL MODE
     private int survivalTime = 0;
@@ -79,6 +83,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     // UI Buttons bounds
     private Rectangle btnMenu;
     private Rectangle btnRetry;
+    private Rectangle btnExit;
+    private Rectangle btnExitGame;
 
     public GamePanel() {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
@@ -89,6 +95,53 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             @Override
             public void mousePressed(MouseEvent e) {
                 Point p = e.getPoint();
+                // 🔥 EXIT SAAT MAIN
+                if (!isGameOver && btnExitGame != null && btnExitGame.contains(p)) {
+                    UIManager.put("OptionPane.background", new Color(30, 30, 30));
+                    UIManager.put("Panel.background", new Color(30, 30, 30));
+
+                    UIManager.put("OptionPane.messageForeground", Color.WHITE);
+                    UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.BOLD, 14));
+
+                    UIManager.put("Button.background", new Color(50, 50, 50));
+                    UIManager.put("Button.foreground", Color.WHITE);
+                    UIManager.put("Button.font", new Font("Segoe UI", Font.BOLD, 12));
+
+                    JPanel panel = new JPanel();
+                    panel.setBackground(new Color(25, 25, 30));
+                    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+                    JLabel title = new JLabel("KONFIRMASI KELUAR");
+                    title.setForeground(new Color(255, 80, 80));
+                    title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                    title.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+
+                    JLabel msg = new JLabel("<html>Yakin mau keluar?<br>Score kamu tidak akan masuk leaderboard.</html>");
+                    msg.setForeground(Color.WHITE);
+                    msg.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                    msg.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+
+                    panel.add(Box.createVerticalStrut(10));
+                    panel.add(title);
+                    panel.add(Box.createVerticalStrut(10));
+                    panel.add(msg);
+                    panel.add(Box.createVerticalStrut(10));
+
+                    int result = JOptionPane.showOptionDialog(
+                            GamePanel.this,
+                            panel,
+                            "EXIT GAME",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.PLAIN_MESSAGE,
+                            null,
+                            new String[]{"Keluar", "Batal"},
+                            "Batal"
+                    );
+
+                    if (result == JOptionPane.YES_OPTION) {
+                        Main.switchPage(Main.DASHBOARD);
+                    }
+                }
                 if (isGameOver) {
                     if (btnRetry != null && btnRetry.contains(p)) {
                         initGame();
@@ -99,13 +152,20 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             }
         });
 
+
         initGame();
 
         // Load Asset
         try {
             deskImage = new ImageIcon(getClass().getResource("/assets/meja.png")).getImage();
+            
+            // 1. LOAD SEMUA IMAGE (DI CONSTRUCTOR, SEKALI SAJA)
+            dosenTua = new ImageIcon(getClass().getResource("/assets/avatar_3_dosen.png")).getImage();
+            dosenMuda = new ImageIcon(getClass().getResource("/assets/d.png")).getImage();
+            dosenCewe = new ImageIcon(getClass().getResource("/assets/dc.png")).getImage();
+            
         } catch (Exception e) {
-            System.err.println("Gagal load meja.png ❌");
+            System.err.println("Gagal load assets (meja/dosen) ❌");
         }
 
         timer = new Timer(1000 / FPS, this);
@@ -140,7 +200,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
         if (player == null) {
             player = new Player(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
-            player.setAvatar("/assets/Avatar_1_cowo.png");
+            player.setAvatar("/assets/avatar_1_cowo.png");
         }
 
         lecturers = new ArrayList<>();
@@ -170,8 +230,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         }
         player.resetCarriedAssignments();
 
-        // Spawn lecturers (Awal game di map luas: 4 dosen)
-        for (int i = 0; i < 4; i++) {
+        // Spawn lecturers (Awal game di map luas: 6 dosen)
+        for (int i = 0; i < 6; i++) {
             spawnLecturer();
         }
 
@@ -182,14 +242,31 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     }
 
     private void spawnLecturer() {
-        // Kecepatan meningkat seiring buku
-        double speed = 1.5 + (collectedBooks * 0.3);
-        speed = Math.min(speed, 6.0); // Batas maksimum speed 6.0
+        // 4. DOSEN MAKIN CEPAT (BASE)
+        double baseSpeed = 1.5 + (collectedBooks * 0.2);
+        baseSpeed = Math.min(baseSpeed, 5.0);
+
+        // 2. RANDOM TIPE DOSEN SAAT SPAWN
+        Image selectedImage;
+        int rand = random.nextInt(3);
+        double finalSpeed = baseSpeed;
+
+        if (rand == 0) {
+            selectedImage = dosenTua;
+            finalSpeed -= 0.5; // Tua: Gerak Lambat
+        } else if (rand == 1) {
+            selectedImage = dosenMuda;
+            finalSpeed += 0.5; // Muda: Gerak Cepat
+        } else {
+            selectedImage = dosenCewe;
+            // Cewek: Gerak Sedang (Base)
+        }
 
         lecturers.add(new Lecturer(
                 random.nextInt(WORLD_WIDTH),
                 random.nextInt(WORLD_HEIGHT),
-                speed));
+                finalSpeed,
+                selectedImage));
     }
 
     private void initObstacles() {
@@ -278,6 +355,19 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     cachedTopScores = ss.getTopScores(5);
 }
 
+    private void updateButtonBounds() {
+    int panelW = getWidth();
+    int panelH = getHeight();
+
+    int btnY = panelH / 2 + 160;
+
+    btnRetry = new Rectangle(panelW / 2 - 310, btnY, 180, 50);
+    btnMenu  = new Rectangle(panelW / 2 - 90, btnY, 180, 50);
+    btnExit  = new Rectangle(panelW / 2 + 130, btnY, 180, 50);
+
+    btnExitGame = new Rectangle(panelW - 130, 25, 100, 40);
+}
+
     private void spawnAssignment() {
         Assignment a;
         boolean overlap;
@@ -296,7 +386,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         } while (overlap);
         assignments.add(a);
     }
-
+    
     // =========================
     // GAME LOOP
     // =========================
@@ -318,9 +408,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             totalScore = survivalTime + (collectedBooks * 10);
         }
 
-        // 👨‍🏫 2. SPAWN DOSEN BERTAHAP (MAKIN SULIT)
-        int spawnDelay = Math.max(30, FPS * (3 - collectedBooks / 5));
-        int maxLecturers = 2 + (collectedBooks / 2);
+        // 👨‍🏫 2. SPAWN DOSEN BERTAHAP (LEBIH CEPAT)
+        int spawnDelay = Math.max(20, FPS * (2 - collectedBooks / 10));
+        
+        // 3. PERBANYAK DOSEN (MAKIN AGRESIF)
+        int maxLecturers = 6 + (collectedBooks);
 
         if (ticks % spawnDelay == 0 && lecturers.size() < maxLecturers) {
             spawnLecturer();
@@ -369,13 +461,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         }
 
         // Dosen AI
-       // Dosen AI
         for (Lecturer l : lecturers) {
-            l.updateAI(player);
+            l.updateAI(player, lecturers);
 
             if (l.intersects(player)) {
                 System.out.println("KETANGKAP DOSEN 💀");
-               isGameOver = true;
+                isGameOver = true;
 
                 saveFinalScore();        // simpan ke MySQL
                 loadLeaderboardFromDB(); // ambil leaderboard dari DB
@@ -396,10 +487,16 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                     submissionDesks.get(0).processSubmission(currentPlayerId, "Collected Assignment " + collectedBooks, "SUCCESS");
                 }
                 
-                // Update semua kecepatan dosen saat ini
-                double newSpeed = Math.min(1.5 + (collectedBooks * 0.3), 6.0);
+                // Update semua kecepatan dosen saat ini sesuai tipenya
                 for (Lecturer l : lecturers) {
-                    l.setSpeed(newSpeed);
+                    double baseSpeed = 1.5 + (collectedBooks * 0.2);
+                    baseSpeed = Math.min(baseSpeed, 5.0);
+                    
+                    double finalSpeed = baseSpeed;
+                    if (l.getImage() == dosenTua) finalSpeed -= 0.5;
+                    else if (l.getImage() == dosenMuda) finalSpeed += 0.5;
+                    
+                    l.setSpeed(finalSpeed);
                 }
 
                 // Spawn buku baru supaya di map tetap ada buku untuk diambil
@@ -485,14 +582,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         drawUI(g2);
     }
 
-    private void updateButtonBounds() {
-        int panelW = getWidth();
-        int panelH = getHeight();
-        // Turunkan tombol agar di bawah leaderboard
-        int btnY = panelH / 2 + 160; 
-        btnRetry = new Rectangle(panelW / 2 - 210, btnY, 200, 50);
-        btnMenu = new Rectangle(panelW / 2 + 10, btnY, 200, 50);
-    }
 
     private void drawButton(Graphics2D g2, String text, Rectangle rect, Color bgColor) {
         // Shadow/Glow
@@ -519,6 +608,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private void drawUI(Graphics2D g2) {
         int panelW = getWidth();
         int panelH = getHeight();
+        updateButtonBounds(); // wajib biar posisi ke-update
         
         // --- 💎 MODERN GLASS HUD ---
         int hudW = 350;
@@ -589,6 +679,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         String scoreStr = String.valueOf(totalScore);
         g2.drawString(scoreStr, badgeX + (badgeW - g2.getFontMetrics().stringWidth(scoreStr))/2, badgeY + 42);
 
+        // 🔥 Tombol EXIT saat gameplay
+        if (!isGameOver) {
+            drawButton(g2, "EXIT", btnExitGame, new Color(120, 0, 0));
+        }
+        
         // --- 💀 GAME OVER SCREEN ---
         if (isGameOver) {
             updateButtonBounds();
@@ -676,11 +771,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             }
             
             int btnY_real = panelH / 2 + 200;
-            btnRetry.y = btnY_real;
-            btnMenu.y = btnY_real;
+            if (btnRetry != null) btnRetry.y = btnY_real;
+            if (btnMenu != null) btnMenu.y = btnY_real;
+           
             
-            drawButton(g2, "COBA LAGI", btnRetry, new Color(180, 30, 30));
-            drawButton(g2, "KE MENU", btnMenu, new Color(40, 40, 45));
+            if (btnRetry != null) drawButton(g2, "COBA LAGI", btnRetry, new Color(180, 30, 30));
+            if (btnMenu != null) drawButton(g2, "KE MENU", btnMenu, new Color(40, 40, 45));
+           
         }
     }
 

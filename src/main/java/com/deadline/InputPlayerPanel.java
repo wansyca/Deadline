@@ -93,8 +93,8 @@ public class InputPlayerPanel extends JPanel {
                 return;
             }
 
-            Main.goToGameWithLoading(playerId, name, selectedAvatar);
-        });
+    Main.goToGameWithLoading(playerId, name, selectedAvatar);
+});
         add(playBtn);
 
         // BUTTON BACK

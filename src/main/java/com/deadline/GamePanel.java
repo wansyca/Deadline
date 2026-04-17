@@ -26,61 +26,143 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import javax.swing.ImageIcon;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.Timer;
+import javax.swing.UIManager;
 
 public class GamePanel extends JPanel implements ActionListener, KeyListener {
-   private static final int WIDTH = 800;
-   private static final int HEIGHT = 600;
-   private static final int WORLD_WIDTH = 8000;
-   private static final int WORLD_HEIGHT = 6000;
-   private static final int FPS = 60;
-   private int camX = 0;
-   private int camY = 0;
-   private Timer timer;
-   private Player player;
-   // Removed submissionDesks field
-   private List<Map<String, Object>> cachedTopScores = new ArrayList();
-   private List<Lecturer> lecturers;
-   private List<Assignment> assignments;
-   private List<Rectangle> obstacles;
-   private Random random = new Random();
-   private boolean isGameOver = false;
-   private Image deskImage;
-   private Image dosenTua;
-   private Image dosenMuda;
-   private Image dosenCewe;
-   private int survivalTime = 0;
-   private int ticks = 0;
-   private int collectedBooks = 0;
-   private int totalScore = 0;
-   private long gameStartTime;
-   private int currentPlayerId = -1;
-   private boolean up;
-   private boolean down;
-   private boolean left;
-   private boolean right;
-   private Rectangle btnMenu;
-   private Rectangle btnRetry;
 
-   public GamePanel() {
-      this.setPreferredSize(new Dimension(800, 600));
-      this.setFocusable(true);
-      this.addKeyListener(this);
-      this.addMouseListener(new MouseAdapter() {
-         public void mousePressed(MouseEvent e) {
-            Point p = e.getPoint();
-            if (GamePanel.this.isGameOver) {
-               if (GamePanel.this.btnRetry != null && GamePanel.this.btnRetry.contains(p)) {
-                  GamePanel.this.initGame();
-               } else if (GamePanel.this.btnMenu != null && GamePanel.this.btnMenu.contains(p)) {
-                  Main.switchPage("DASHBOARD");
-               }
+    // =========================
+    // SCREEN
+    // =========================
+    private static final int WIDTH = 800;
+    private static final int HEIGHT = 600;
+
+    // =========================
+    // WORLD (MAP SUPER LUAS - KAMPUS GEDUNG A)
+    // =========================
+    private static final int WORLD_WIDTH = 8000;
+    private static final int WORLD_HEIGHT = 6000;
+
+    private static final int FPS = 60;
+
+    // =========================
+    // CAMERA
+    // =========================
+    private int camX = 0;
+    private int camY = 0;
+
+    // =========================
+    // GAME OBJECT
+    // =========================
+    private Timer timer;
+    private Player player;
+    private List<SubmissionDesk> submissionDesks;
+   private List<Map<String, Object>> cachedTopScores = new ArrayList<>();
+    private List<Lecturer> lecturers;
+    private List<Assignment> assignments;
+    private List<Rectangle> obstacles;
+
+    private Random random = new Random();
+    private boolean isGameOver = false;
+
+    private Image deskImage;
+    private Image dosenTua;
+    private Image dosenMuda;
+    private Image dosenCewe;
+
+
+    // 🔥 SURVIVAL MODE
+    private int survivalTime = 0;
+    private int ticks = 0;
+    private int collectedBooks = 0;
+    private int totalScore = 0;
+    private long gameStartTime;
+    
+    // BACKEND INTEGRATION
+    private int currentPlayerId = -1;
+
+    // Movement
+    private boolean up, down, left, right;
+    
+    // UI Buttons bounds
+    private Rectangle btnMenu;
+    private Rectangle btnRetry;
+    private Rectangle btnExit;
+    private Rectangle btnExitGame;
+
+    public GamePanel() {
+        setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        setFocusable(true);
+        addKeyListener(this);
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                Point p = e.getPoint();
+                // 🔥 EXIT SAAT MAIN
+                if (!isGameOver && btnExitGame != null && btnExitGame.contains(p)) {
+                    UIManager.put("OptionPane.background", new Color(30, 30, 30));
+                    UIManager.put("Panel.background", new Color(30, 30, 30));
+
+                    UIManager.put("OptionPane.messageForeground", Color.WHITE);
+                    UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.BOLD, 14));
+
+                    UIManager.put("Button.background", new Color(50, 50, 50));
+                    UIManager.put("Button.foreground", Color.WHITE);
+                    UIManager.put("Button.font", new Font("Segoe UI", Font.BOLD, 12));
+
+                    JPanel panel = new JPanel();
+                    panel.setBackground(new Color(25, 25, 30));
+                    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+                    JLabel title = new JLabel("KONFIRMASI KELUAR");
+                    title.setForeground(new Color(255, 80, 80));
+                    title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                    title.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+
+                    JLabel msg = new JLabel("<html>Yakin mau keluar?<br>Score kamu tidak akan masuk leaderboard.</html>");
+                    msg.setForeground(Color.WHITE);
+                    msg.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                    msg.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+
+                    panel.add(Box.createVerticalStrut(10));
+                    panel.add(title);
+                    panel.add(Box.createVerticalStrut(10));
+                    panel.add(msg);
+                    panel.add(Box.createVerticalStrut(10));
+
+                    int result = JOptionPane.showOptionDialog(
+                            GamePanel.this,
+                            panel,
+                            "EXIT GAME",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.PLAIN_MESSAGE,
+                            null,
+                            new String[]{"Keluar", "Batal"},
+                            "Batal"
+                    );
+
+                    if (result == JOptionPane.YES_OPTION) {
+                        Main.switchPage(Main.DASHBOARD);
+                    }
+                }
+                if (isGameOver) {
+                    if (btnRetry != null && btnRetry.contains(p)) {
+                        initGame();
+                    } else if (btnMenu != null && btnMenu.contains(p)) {
+                        Main.switchPage(Main.DASHBOARD);
+                    }
+                }
             }
+        });
 
-         }
-      });
-      this.initGame();
+
+        initGame();
 
       try {
          this.deskImage = (new ImageIcon(this.getClass().getResource("/assets/meja.png"))).getImage();
@@ -248,33 +330,50 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
    }
 
    private void loadLeaderboardFromDB() {
-      ScoreService ss = new ScoreService();
-      this.cachedTopScores = ss.getTopScores(5);
-   }
+    com.deadline.backend.ScoreService ss = new com.deadline.backend.ScoreService();
+    cachedTopScores = ss.getTopScores(5);
+}
 
-   private void spawnAssignment() {
-      Assignment a;
-      boolean overlap;
-      do {
-         overlap = false;
-         a = new Assignment(this.random.nextInt(7900) + 50, this.random.nextInt(5900) + 50);
-         Rectangle areaCek = new Rectangle(a.getX() - 15, a.getY() - 15, a.getWidth() + 30, a.getHeight() + 30);
+    private void updateButtonBounds() {
+    int panelW = getWidth();
+    int panelH = getHeight();
 
-         for(Rectangle r : this.obstacles) {
-            if (areaCek.intersects(r)) {
-               overlap = true;
-               break;
+    int btnY = panelH / 2 + 160;
+
+    btnRetry = new Rectangle(panelW / 2 - 310, btnY, 180, 50);
+    btnMenu  = new Rectangle(panelW / 2 - 90, btnY, 180, 50);
+    btnExit  = new Rectangle(panelW / 2 + 130, btnY, 180, 50);
+
+    btnExitGame = new Rectangle(panelW - 130, 25, 100, 40);
+}
+
+    private void spawnAssignment() {
+        Assignment a;
+        boolean overlap;
+        do {
+            overlap = false;
+            a = new Assignment(
+                    random.nextInt(WORLD_WIDTH - 100) + 50,
+                    random.nextInt(WORLD_HEIGHT - 100) + 50);
+            Rectangle areaCek = new Rectangle(a.getX() - 15, a.getY() - 15, a.getWidth() + 30, a.getHeight() + 30);
+            for (Rectangle r : obstacles) {
+                if (areaCek.intersects(r)) {
+                    overlap = true;
+                    break;
+                }
             }
-         }
-      } while(overlap);
-
-      this.assignments.add(a);
-   }
-
-   public void actionPerformed(ActionEvent e) {
-      this.updateGame();
-      this.repaint();
-   }
+        } while (overlap);
+        assignments.add(a);
+    }
+    
+    // =========================
+    // GAME LOOP
+    // =========================
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        updateGame();
+        repaint();
+    }
 
    private void updateGame() {
       if (!this.isGameOver) {
@@ -426,13 +525,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
       this.drawUI(g2);
    }
 
-   private void updateButtonBounds() {
-      int panelW = this.getWidth();
-      int panelH = this.getHeight();
-      int btnY = panelH / 2 + 160;
-      this.btnRetry = new Rectangle(panelW / 2 - 210, btnY, 200, 50);
-      this.btnMenu = new Rectangle(panelW / 2 + 10, btnY, 200, 50);
-   }
 
    private void drawButton(Graphics2D g2, String text, Rectangle rect, Color bgColor) {
       g2.setColor(new Color(0, 0, 0, 100));
@@ -449,14 +541,18 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
       g2.drawString(text, rect.x + (rect.width - tw) / 2, rect.y + 32);
    }
 
-   private void drawUI(Graphics2D g2) {
-      int panelW = this.getWidth();
-      int panelH = this.getHeight();
-      int hudW = 350;
-      int hudH = 100;
-      int hudX = 25;
-      int hudY = 25;
-      boolean danger = this.collectedBooks >= 10;
+    private void drawUI(Graphics2D g2) {
+        int panelW = getWidth();
+        int panelH = getHeight();
+        updateButtonBounds(); // wajib biar posisi ke-update
+        
+        boolean danger = collectedBooks >= 10;
+
+        // --- 💎 MODERN GLASS HUD ---
+        int hudW = 350;
+        int hudH = 100;
+        int hudX = 25;
+        int hudY = 25;
 
       g2.setColor(new Color(0, 0, 0, 50));
       g2.fillRoundRect(hudX - 2, hudY - 2, hudW + 4, hudH + 4, 20, 20);
@@ -474,85 +570,120 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
       g2.setStroke(new BasicStroke(danger ? 3.0F : 1.5F));
       g2.drawRoundRect(hudX, hudY, hudW, hudH, 20, 20);
 
-      if (danger) {
-         g2.setColor(new Color(255, 255, 255, 200));
-         g2.setFont(new Font("Segoe UI", 1, 14));
-         String msg = "⚠️ DANGER MODE: DOSEN MENGEJAR!";
-         g2.drawString(msg, hudX + 20, hudY - 10);
-      }
-      g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-      g2.setFont(new Font("Segoe UI", 1, 16));
-      g2.setColor(new Color(180, 200, 255));
-      g2.drawString("\ud83d\udccd SURVIVOR: " + this.player.getName().toUpperCase(), hudX + 20, hudY + 25);
-      g2.setFont(new Font("Segoe UI Semibold", 0, 18));
-      g2.setColor(Color.WHITE);
-      g2.drawString("⏱️ SURVIVED", hudX + 20, hudY + 58);
-      g2.setFont(new Font("Segoe UI", 1, 22));
-      g2.setColor(new Color(0, 255, 200));
-      g2.drawString(this.survivalTime + "s", hudX + 150, hudY + 59);
-      g2.setFont(new Font("Segoe UI Semibold", 0, 18));
-      g2.setColor(Color.WHITE);
-      g2.drawString("\ud83d\udcda BOOKS", hudX + 20, hudY + 85);
-      g2.setFont(new Font("Segoe UI", 1, 22));
-      g2.setColor(new Color(255, 215, 0));
-      g2.drawString(String.valueOf(this.collectedBooks), hudX + 150, hudY + 86);
-      int badgeW = 100;
-      int badgeH = 50;
-      int badgeX = hudX + hudW - badgeW - 15;
-      int badgeY = hudY + (hudH - badgeH) / 2 + 5;
-      g2.setColor(new Color(255, 255, 255, 20));
-      g2.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
-      g2.setColor(new Color(255, 255, 255, 80));
-      g2.drawRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
-      g2.setFont(new Font("Segoe UI", 1, 12));
-      g2.setColor(new Color(200, 200, 200));
-      g2.drawString("SCORE", badgeX + (badgeW - g2.getFontMetrics().stringWidth("SCORE")) / 2, badgeY + 18);
-      g2.setFont(new Font("Impact", 0, 24));
-      g2.setColor(Color.WHITE);
-      String scoreStr = String.valueOf(this.totalScore);
-      g2.drawString(scoreStr, badgeX + (badgeW - g2.getFontMetrics().stringWidth(scoreStr)) / 2, badgeY + 42);
-      if (this.isGameOver) {
-         this.updateButtonBounds();
-         g2.setColor(new Color(15, 5, 5, 220));
-         g2.fillRect(0, 0, panelW, panelH);
-         RadialGradientPaint rgp = new RadialGradientPaint(new Point(panelW / 2, panelH / 2), (float)panelW, new float[]{0.0F, 1.0F}, new Color[]{new Color(100, 0, 0, 0), new Color(50, 0, 0, 150)});
-         g2.setPaint(rgp);
-         g2.fillRect(0, 0, panelW, panelH);
-         g2.setFont(new Font("Impact", 0, 100));
-         String overText = "GAME OVER";
-         int textWidth = g2.getFontMetrics().stringWidth(overText);
-         g2.setColor(new Color(0, 0, 0, 150));
-         g2.drawString(overText, (panelW - textWidth) / 2 + 5, panelH / 2 - 125);
-         g2.setColor(new Color(255, 50, 50));
-         g2.drawString(overText, (panelW - textWidth) / 2, panelH / 2 - 130);
-         g2.setColor(Color.WHITE);
-         g2.setFont(new Font("Segoe UI Light", 0, 28));
-         String subText = "Yahh, telat submit tugas";
-         int subWidth = g2.getFontMetrics().stringWidth(subText);
-         g2.drawString(subText, (panelW - subWidth) / 2, panelH / 2 - 80);
-         if (this.cachedTopScores != null) {
-            int lbW = 400;
-            int lbH = 220;
-            int lbX = (panelW - lbW) / 2;
-            int lbY = panelH / 2 - 40;
-            g2.setColor(new Color(255, 255, 255, 15));
-            g2.fillRoundRect(lbX, lbY, lbW, lbH, 15, 15);
-            g2.setColor(new Color(255, 255, 255, 40));
-            g2.drawRoundRect(lbX, lbY, lbW, lbH, 15, 15);
-            g2.setFont(new Font("Segoe UI", 1, 16));
-            g2.setColor(new Color(150, 150, 180));
-            g2.drawString("TOP SURVIVORS", lbX + 20, lbY + 30);
-            int entryY = lbY + 65;
+        // Styling teks
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        
+        // Player Name (Header)
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        g2.setColor(new Color(180, 200, 255));
+        g2.drawString("📍 SURVIVOR: " + player.getName().toUpperCase(), hudX + 20, hudY + 25);
 
-            for(int i = 0; i < Math.min(this.cachedTopScores.size(), 5); ++i) {
-               Map<String, Object> ps = (Map)this.cachedTopScores.get(i);
-               String name = (String)ps.get("username");
-               int score = (Integer)ps.get("score");
-               boolean isCurrent = name.equalsIgnoreCase(this.player.getName()) && score == this.totalScore;
-               if (i == 0) {
-                  g2.setColor(new Color(255, 215, 0, 40));
-                  g2.fillRoundRect(lbX + 10, entryY - 22, lbW - 20, 30, 8, 8);
-               }
+        // Stats
+        g2.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 18));
+        g2.setColor(Color.WHITE);
+        g2.drawString("⏱️ SURVIVED", hudX + 20, hudY + 58);
+        
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        g2.setColor(new Color(0, 255, 200));
+        g2.drawString(survivalTime + "s", hudX + 150, hudY + 59);
+
+        g2.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 18));
+        g2.setColor(Color.WHITE);
+        g2.drawString("📚 BOOKS", hudX + 20, hudY + 85);
+        
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        g2.setColor(new Color(255, 215, 0));
+        g2.drawString(String.valueOf(collectedBooks), hudX + 150, hudY + 86);
+
+        // Score Badge
+        int badgeW = 100;
+        int badgeH = 50;
+        int badgeX = hudX + hudW - badgeW - 15;
+        int badgeY = hudY + (hudH - badgeH) / 2 + 5;
+        
+        g2.setColor(new Color(255, 255, 255, 20));
+        g2.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
+        g2.setColor(new Color(255, 255, 255, 80));
+        g2.drawRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
+        
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2.setColor(new Color(200, 200, 200));
+        g2.drawString("SCORE", badgeX + (badgeW - g2.getFontMetrics().stringWidth("SCORE"))/2, badgeY + 18);
+        
+        g2.setFont(new Font("Impact", Font.PLAIN, 24));
+        g2.setColor(Color.WHITE);
+        String scoreStr = String.valueOf(totalScore);
+        g2.drawString(scoreStr, badgeX + (badgeW - g2.getFontMetrics().stringWidth(scoreStr))/2, badgeY + 42);
+
+        // 🔥 Tombol EXIT saat gameplay
+        if (!isGameOver) {
+            drawButton(g2, "EXIT", btnExitGame, new Color(120, 0, 0));
+        }
+        
+        // --- 💀 GAME OVER SCREEN ---
+        if (isGameOver) {
+            updateButtonBounds();
+            
+            // Background Blur-ish Overlay
+            g2.setColor(new Color(15, 5, 5, 220));
+            g2.fillRect(0, 0, panelW, panelH);
+
+            // Red Vignette
+            RadialGradientPaint rgp = new RadialGradientPaint(
+                new Point(panelW / 2, panelH / 2),
+                panelW,
+                new float[]{0.0f, 1.0f},
+                new Color[]{new Color(100, 0, 0, 0), new Color(50, 0, 0, 150)}
+            );
+            g2.setPaint(rgp);
+            g2.fillRect(0, 0, panelW, panelH);
+
+            // Text Shadow
+            g2.setFont(new Font("Impact", Font.PLAIN, 100));
+            String overText = "GAME OVER";
+            int textWidth = g2.getFontMetrics().stringWidth(overText);
+            g2.setColor(new Color(0, 0, 0, 150));
+            g2.drawString(overText, (panelW - textWidth) / 2 + 5, panelH / 2 - 125);
+            
+            g2.setColor(new Color(255, 50, 50));
+            g2.drawString(overText, (panelW - textWidth) / 2, panelH / 2 - 130);
+            
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Segoe UI Light", Font.PLAIN, 28));
+            String subText = "Yahh, telat submit tugas";
+            int subWidth = g2.getFontMetrics().stringWidth(subText);
+            g2.drawString(subText, (panelW - subWidth) / 2, panelH / 2 - 80);
+            
+            // --- 🏆 EMBEDDED LEADERBOARD ---
+            if (cachedTopScores != null) {
+                int lbW = 400;
+                int lbH = 220;
+                int lbX = (panelW - lbW) / 2;
+                int lbY = panelH / 2 - 40;
+
+                // Glass Panel
+                g2.setColor(new Color(255, 255, 255, 15));
+                g2.fillRoundRect(lbX, lbY, lbW, lbH, 15, 15);
+                g2.setColor(new Color(255, 255, 255, 40));
+                g2.drawRoundRect(lbX, lbY, lbW, lbH, 15, 15);
+
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                g2.setColor(new Color(150, 150, 180));
+                g2.drawString("TOP SURVIVORS", lbX + 20, lbY + 30);
+
+                int entryY = lbY + 65;
+                for (int i = 0; i < Math.min(cachedTopScores.size(), 5); i++) {
+                  Map<String, Object> ps = cachedTopScores.get(i);
+
+                    String name = (String) ps.get("username");
+                    int score = (int) ps.get("score");
+                    boolean isCurrent = name.equalsIgnoreCase(player.getName()) && score == totalScore;
+
+                    // Rank 1 Glow Effect
+                    if (i == 0) {
+                        g2.setColor(new Color(255, 215, 0, 40));
+                        g2.fillRoundRect(lbX + 10, entryY - 22, lbW - 20, 30, 8, 8);
+                    }
 
                if (isCurrent) {
                   g2.setColor(new Color(0, 255, 150));
@@ -562,24 +693,28 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                   g2.setFont(new Font("Segoe UI", 0, 18));
                }
 
-               String rankText = "#" + (i + 1);
-               g2.drawString(rankText, lbX + 20, entryY);
-               g2.drawString(name, lbX + 60, entryY);
-               String sText = String.valueOf(score);
-               int sWidth = g2.getFontMetrics().stringWidth(sText);
-               g2.drawString(sText, lbX + lbW - sWidth - 20, entryY);
-               entryY += 35;
+                    String rankText = "#" + (i + 1);
+                    g2.drawString(rankText, lbX + 20, entryY);
+                    g2.drawString(name, lbX + 60, entryY);
+                    
+                    String sText = String.valueOf(score);
+                    int sWidth = g2.getFontMetrics().stringWidth(sText);
+                    g2.drawString(sText, lbX + lbW - sWidth - 20, entryY);
+
+                    entryY += 35;
+                }
             }
-         }
-
-         int btnY_real = panelH / 2 + 200;
-         this.btnRetry.y = btnY_real;
-         this.btnMenu.y = btnY_real;
-         this.drawButton(g2, "COBA LAGI", this.btnRetry, new Color(180, 30, 30));
-         this.drawButton(g2, "KE MENU", this.btnMenu, new Color(40, 40, 45));
-      }
-
-   }
+            
+            int btnY_real = panelH / 2 + 200;
+            if (btnRetry != null) btnRetry.y = btnY_real;
+            if (btnMenu != null) btnMenu.y = btnY_real;
+           
+            
+            if (btnRetry != null) drawButton(g2, "COBA LAGI", btnRetry, new Color(180, 30, 30));
+            if (btnMenu != null) drawButton(g2, "KE MENU", btnMenu, new Color(40, 40, 45));
+           
+        }
+    }
 
    public void keyPressed(KeyEvent e) {
       switch (e.getKeyCode()) {

@@ -26,9 +26,9 @@ public class ScoreService {
 
     public List<Map<String, Object>> getTopScores(int limit) {
         List<Map<String, Object>> scores = new ArrayList<>();
-        String query = "SELECT p.username, s.score, s.survival_time FROM scores s " +
-                       "JOIN players p ON s.player_id = p.id " +
-                       "ORDER BY s.score DESC, s.survival_time DESC LIMIT ?";
+        String query = "SELECT p.username, p.avatar, s.score, s.survival_time FROM scores s " +
+               "JOIN players p ON s.player_id = p.id " +
+               "ORDER BY s.score DESC, s.survival_time DESC LIMIT ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, limit);
@@ -36,6 +36,7 @@ public class ScoreService {
                 while (rs.next()) {
                     Map<String, Object> record = new HashMap<>();
                     record.put("username", rs.getString("username"));
+                    record.put("avatar", rs.getString("avatar"));
                     record.put("score", rs.getInt("score"));
                     record.put("survival_time", rs.getInt("survival_time"));
                     scores.add(record);

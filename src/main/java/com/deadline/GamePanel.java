@@ -73,6 +73,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private int collectedBooks = 0;
     private int totalScore = 0;
     private long gameStartTime;
+    private int currentLevel = 1;
+    private int targetBooks = 10;
+    private int levelTime = 60;
+    private int timeLeft = 60;
     
     // BACKEND INTEGRATION
     private int currentPlayerId = -1;
@@ -152,15 +156,39 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         initGame();
     }
 
-   // =========================
-    // INIT GAME
     // =========================
+    // LEVEL UP
+    // =========================
+
+    private void levelUp() {
+        currentLevel++;
+        targetBooks += 5;
+        levelTime += 30;
+        timeLeft = levelTime;
+        collectedBooks = 0;
+        survivalTime += 10;
+
+        // spawn lebih banyak dosen
+        for (int i = 0; i < 3; i++) {
+            spawnLecturer();
+        }
+
+        // spawn lebih banyak buku
+        for (int i = 0; i < 20; i++) {
+            spawnAssignment();
+        }
+    }
+
     private void initGame() {
         isGameOver = false;
         survivalTime = 0;
         ticks = 0;
         collectedBooks = 0;
         totalScore = 0;
+        currentLevel = 1;
+        targetBooks = 10;
+        levelTime = 60;
+        timeLeft = levelTime;
         gameStartTime = System.currentTimeMillis();
 
         if (player == null) {
@@ -369,8 +397,14 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         ticks++;
         if (ticks % FPS == 0) {
             survivalTime++;
-            totalScore = survivalTime + (collectedBooks * 10);
-        }
+            timeLeft--;
+
+            if (timeLeft <= 0) {
+                isGameOver = true;
+                saveFinalScore();
+                loadLeaderboardFromDB();
+    }
+}
 
         // 👨‍🏫 2. SPAWN DOSEN BERTAHAP (LEBIH CEPAT)
         int spawnDelay = Math.max(20, FPS * (2 - collectedBooks / 10));
@@ -442,8 +476,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             Assignment a = assignments.get(i);
             if (player.intersects(a)) {
                 collectedBooks++;
-                totalScore = survivalTime + (collectedBooks * 10);
                 assignments.remove(i);
+                if (collectedBooks >= targetBooks) {
+                    levelUp();
+                }
                 
                 // BACKEND: Record submission via SubmissionDesk if needed, 
                 // but since GamePanel gives score instantly, we just record task submission.
@@ -602,27 +638,27 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         
         // Player Name (Header)
+
         g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
         g2.setColor(new Color(180, 200, 255));
-        g2.drawString("📍 SURVIVOR: " + player.getName().toUpperCase(), hudX + 20, hudY + 25);
-
-        // Stats
-        g2.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 18));
-        g2.setColor(Color.WHITE);
-        g2.drawString("⏱️ SURVIVED", hudX + 20, hudY + 58);
-        
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        g2.setColor(new Color(0, 255, 200));
-        g2.drawString(survivalTime + "s", hudX + 150, hudY + 59);
+        g2.drawString("SURVIVOR: " + player.getName().toUpperCase(), hudX + 20, hudY + 25);
 
         g2.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 18));
         g2.setColor(Color.WHITE);
-        g2.drawString("📚 BOOKS", hudX + 20, hudY + 85);
-        
+        g2.drawString("TARGET", hudX + 20, hudY + 58);
+
         g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
         g2.setColor(new Color(255, 215, 0));
-        g2.drawString(String.valueOf(collectedBooks), hudX + 150, hudY + 86);
+        g2.drawString(collectedBooks + "/" + targetBooks, hudX + 150, hudY + 59);
 
+        g2.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 18));
+        g2.setColor(Color.WHITE);
+        g2.drawString("TIME", hudX + 20, hudY + 85);
+
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        g2.setColor(new Color(0, 255, 200));
+        g2.drawString(timeLeft + "s", hudX + 150, hudY + 86);
+        
         // Score Badge
         int badgeW = 100;
         int badgeH = 50;
@@ -636,13 +672,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         
         g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
         g2.setColor(new Color(200, 200, 200));
-        g2.drawString("SCORE", badgeX + (badgeW - g2.getFontMetrics().stringWidth("SCORE"))/2, badgeY + 18);
-        
+        g2.drawString("LEVEL", badgeX + (badgeW - g2.getFontMetrics().stringWidth("LEVEL"))/2, badgeY + 18);
+
         g2.setFont(new Font("Impact", Font.PLAIN, 24));
         g2.setColor(Color.WHITE);
-        String scoreStr = String.valueOf(totalScore);
-        g2.drawString(scoreStr, badgeX + (badgeW - g2.getFontMetrics().stringWidth(scoreStr))/2, badgeY + 42);
-
+        String lvlStr = String.valueOf(currentLevel);
+        g2.drawString(lvlStr, badgeX + (badgeW - g2.getFontMetrics().stringWidth(lvlStr))/2, badgeY + 42);
+        
         // 🔥 Tombol EXIT saat gameplay
         if (!isGameOver) {
             drawButton(g2, "EXIT", btnExitGame, new Color(120, 0, 0));
@@ -790,7 +826,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         // BACKEND: Save to database
         if (currentPlayerId != -1) {
             com.deadline.backend.ScoreService scoreService = new com.deadline.backend.ScoreService();
-            scoreService.saveScore(currentPlayerId, totalScore, timePlayed);
+            int targetScore = (int) ((double) collectedBooks / targetBooks * 100);
+            int finalScore = (currentLevel * 100) + targetScore + survivalTime;
+            scoreService.saveScore(currentPlayerId, finalScore, timePlayed);
         }
         
         // Use older LeaderboardManager for fallback/txt compatibility if we don't rewrite it.

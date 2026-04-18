@@ -13,6 +13,7 @@ import java.awt.GridLayout;
 import java.awt.GridBagLayout;
 import java.awt.RenderingHints;
 import java.awt.BasicStroke;
+import java.awt.Image;
 import java.util.List;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -193,7 +194,12 @@ public class SurvivorRankingUI extends JPanel {
         } else {
             for (int i = 3; i < scores.size(); i++) {
                 LeaderboardManager.PlayerScore ps = scores.get(i);
-                list.add(createRow(String.valueOf(i + 1), ps.name, String.valueOf(ps.score)));
+                list.add(createRow(
+                    String.valueOf(i + 1),
+                    ps.name,
+                    String.valueOf(ps.score),
+                    ps.avatarPath
+                ));
                 list.add(Box.createRigidArea(new Dimension(0, 10)));
             }
         }
@@ -229,35 +235,64 @@ public class SurvivorRankingUI extends JPanel {
         return scroll;
     }
 
-    private JPanel createRow(String rank, String name, String score) {
-        JPanel row = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(255, 255, 255, 10));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
-                g2.setColor(new Color(255, 255, 255, 20));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                g2.dispose();
-            }
-        };
-        row.setOpaque(false);
-        row.setPreferredSize(new Dimension(0, 55));
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
-        row.setBorder(BorderFactory.createEmptyBorder(0, 25, 0, 25));
+    private JPanel createRow(String rank, String name, String score, String avatarPath) {
 
-        JLabel left = new JLabel("#" + rank + "    " + name.toUpperCase());
-        left.setForeground(new Color(220, 220, 240));
-        left.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 16));
+        
 
-        JLabel right = new JLabel(score + " PTS");
-        right.setForeground(new Color(150, 180, 255));
-        right.setFont(new Font("Segoe UI", Font.BOLD, 16));
+    JPanel row = new JPanel(new BorderLayout()) {
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(new Color(255, 255, 255, 10));
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+            g2.setColor(new Color(255, 255, 255, 20));
+            g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
+            g2.dispose();
+        }
+    };
 
-        row.add(left, BorderLayout.WEST);
-        row.add(right, BorderLayout.EAST);
+    row.setOpaque(false);
+    row.setPreferredSize(new Dimension(0, 55));
+    row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+    row.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
 
-        return row;
+    // 🔥 AVATAR
+    JLabel avatarLabel = new JLabel();
+    avatarLabel.setPreferredSize(new Dimension(40, 40));
+
+    try {
+        if (avatarPath != null) {
+            ImageIcon icon = new ImageIcon(getClass().getResource(avatarPath));
+            Image img = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+            avatarLabel.setIcon(new ImageIcon(img));
+        }
+    } catch (Exception e) {
+        avatarLabel.setText("?");
+        avatarLabel.setForeground(Color.WHITE);
     }
+
+    // 🔥 TEXT
+    JLabel nameLabel = new JLabel("#" + rank + "  " + name.toUpperCase());
+    nameLabel.setForeground(new Color(220, 220, 240));
+    nameLabel.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 16));
+
+    JLabel scoreLabel = new JLabel(score + " PTS");
+    scoreLabel.setForeground(new Color(150, 180, 255));
+    scoreLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+
+    // 🔥 LEFT CONTAINER (AVATAR + NAME)
+    JPanel leftPanel = new JPanel();
+    leftPanel.setOpaque(false);
+    leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.X_AXIS));
+
+    leftPanel.add(avatarLabel);
+    leftPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+    leftPanel.add(nameLabel);
+
+    row.add(leftPanel, BorderLayout.WEST);
+    row.add(scoreLabel, BorderLayout.EAST);
+
+    return row;
+}
 }

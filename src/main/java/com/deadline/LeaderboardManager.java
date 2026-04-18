@@ -9,11 +9,13 @@ public class LeaderboardManager {
         public String name;
         public int score;
         public int timeSeconds;
+        public String avatarPath;
 
-        public PlayerScore(String name, int score, int timeSeconds) {
+        public PlayerScore(String name, int score, int timeSeconds, String avatarPath) {
             this.name = name;
             this.score = score;
             this.timeSeconds = timeSeconds;
+            this.avatarPath = avatarPath;
         }
     }
 
@@ -34,7 +36,8 @@ public class LeaderboardManager {
             String name = (String) record.get("username");
             int score = (int) record.get("score");
             int time = (int) record.get("survival_time");
-            scores.add(new PlayerScore(name, score, time));
+            String avatarPath = (String) record.get("avatar");
+            scores.add(new PlayerScore(name, score, time, avatarPath));
         }
 
         // Add dummy data only if we have fewer than 3 scores (maintain existing logic, but UI will fetch from DB)

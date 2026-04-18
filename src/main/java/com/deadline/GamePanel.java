@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Random;
+import java.awt.Shape;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 
 
 public class GamePanel extends JPanel implements ActionListener, KeyListener {
@@ -52,14 +55,15 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     // =========================
     private Timer timer;
     private Player player;
-    private List<SubmissionDesk> submissionDesks;
-   private List<Map<String, Object>> cachedTopScores = new ArrayList<>();
+    private List<Map<String, Object>> cachedTopScores = new ArrayList<>();
     private List<Lecturer> lecturers;
     private List<Assignment> assignments;
     private List<Rectangle> obstacles;
 
     private Random random = new Random();
     private boolean isGameOver = false;
+    private boolean scoreSaved = false;
+    private int leaderboardScrollY = 0;
 
     private Image deskImage;
     private Image dosenTua;
@@ -117,6 +121,22 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             }
         });
 
+        addMouseWheelListener(new MouseWheelListener() {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e) {
+                if (isGameOver && cachedTopScores != null) {
+                    leaderboardScrollY += e.getWheelRotation() * 25;
+                    if (leaderboardScrollY < 0) leaderboardScrollY = 0;
+                    
+                    int maxScroll = (cachedTopScores.size() * 35) - 140; 
+                    if (maxScroll < 0) maxScroll = 0;
+                    if (leaderboardScrollY > maxScroll) leaderboardScrollY = maxScroll;
+                    
+                    repaint();
+                }
+            }
+        });
+
 
         initGame();
 
@@ -157,6 +177,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     // =========================
     private void initGame() {
         isGameOver = false;
+        scoreSaved = false;
+        leaderboardScrollY = 0;
         survivalTime = 0;
         ticks = 0;
         collectedBooks = 0;
@@ -170,7 +192,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
         lecturers = new ArrayList<>();
         assignments = new ArrayList<>();
-        submissionDesks = new ArrayList<>();
         initObstacles();
 
         // 🔥 SAFETY SPAWN: Cari lokasi kosong untuk player agar tidak nyangkut saat mulai
@@ -236,7 +257,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
     private void initObstacles() {
         obstacles = new ArrayList<>();
-        submissionDesks = new ArrayList<>();
         int wallThin = 60;
 
         // 1. BOUNDARY WALLS (Tembok Luar Kampus)
@@ -273,15 +293,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
                 // ISI KELAS (Meja & Kursi)
                 generateRoomDecor(startX + 150, startY + 150, roomW - 300, roomH - 350);
-                
-                // SUBMISSION DESK (Satu di tiap ruangan atau tiap 2 ruangan)
-                if ((row + col) % 2 == 0) {
-                    int deskX = startX + roomW / 2 - 150;
-                    int deskY = startY + (row == 0 ? 100 : roomH - 200);
-                    Rectangle sdRect = new Rectangle(deskX, deskY, 300, 100);
-                    obstacles.add(sdRect);
-                    submissionDesks.add(new SubmissionDesk(deskX, deskY));
-                }
             }
         }
 
@@ -307,8 +318,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             }
         }
 
-        // Meja Dosen / Podium di depan kelas
-        obstacles.add(new Rectangle(x + w / 2 - 100, y, 200, 80));
+        // Meja Depan disamakan dengan meja mahasiswa
+        int frontDeskX = x + w / 2 - 50;
+        int frontDeskY = y;
+        obstacles.add(new Rectangle(frontDeskX, frontDeskY, mejaWidth, mejaHeight));
         
         // Lemari di pojok kelas
         obstacles.add(new Rectangle(x, y, 80, 150));
@@ -317,7 +330,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
    private void loadLeaderboardFromDB() {
     com.deadline.backend.ScoreService ss = new com.deadline.backend.ScoreService();
-    cachedTopScores = ss.getTopScores(5);
+    cachedTopScores = ss.getAllScores();
 }
 
     private void updateButtonBounds() {
@@ -432,8 +445,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                 System.out.println("KETANGKAP DOSEN 💀");
                 isGameOver = true;
 
-                saveFinalScore();        // simpan ke MySQL
-                loadLeaderboardFromDB(); // ambil leaderboard dari DB
+                if (!scoreSaved) {
+                    saveFinalScore();        // simpan ke MySQL & File (HANYA SEKALI)
+                    loadLeaderboardFromDB(); // ambil leaderboard dari DB
+                    scoreSaved = true;       // Kunci agar tidak save berkali-kali
+                }
             }
         }
 
@@ -445,10 +461,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                 totalScore = survivalTime + (collectedBooks * 10);
                 assignments.remove(i);
                 
-                // BACKEND: Record submission via SubmissionDesk if needed, 
-                // but since GamePanel gives score instantly, we just record task submission.
-                if (currentPlayerId != -1 && !submissionDesks.isEmpty()) {
-                    submissionDesks.get(0).processSubmission(currentPlayerId, "Collected Assignment " + collectedBooks, "SUCCESS");
+                // BACKEND: Record task submission
+                if (currentPlayerId != -1) {
+                    new com.deadline.backend.SubmissionService().submitTask(currentPlayerId, "Collected Assignment " + collectedBooks, "SUCCESS");
                 }
                 
                 // Update semua kecepatan dosen saat ini sesuai tipenya
@@ -512,10 +527,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                 g2.setColor(new Color(60, 60, 70));
                 g2.setStroke(new BasicStroke(2));
                 g2.draw(rect);
-            } else if (rect.width == 300) {
-                // Meja Dosen (Submission Desk) di-skip karena digambar terpisah
             } else {
-                // 🪑 MEJA MAHASISWA (Pake Asset desk.png)
+                // 🪑 MEJA MAHASISWA & DOSEN (Pake Asset desk.png)
                 // Shadow tipis
                 g2.setColor(new Color(0, 0, 0, 30));
                 g2.fillRoundRect(rect.x + 5, rect.y + 10, rect.width, rect.height, 10, 10);
@@ -528,10 +541,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                     g2.fillRoundRect(rect.x, rect.y, rect.width, rect.height - 10, 8, 8);
                 }
             }
-        }
-
-        for (SubmissionDesk d : submissionDesks) {
-            d.draw(g2);
         }
 
         for (Assignment a : assignments)
@@ -697,10 +706,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
                 g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
                 g2.setColor(new Color(150, 150, 180));
-                g2.drawString("TOP SURVIVORS", lbX + 20, lbY + 30);
+                g2.drawString("ALL SURVIVORS (SCROLL)", lbX + 20, lbY + 30);
 
-                int entryY = lbY + 65;
-                for (int i = 0; i < Math.min(cachedTopScores.size(), 5); i++) {
+                Shape oldClip = g2.getClip();
+                g2.clipRect(lbX, lbY + 40, lbW, lbH - 50);
+
+                int entryY = lbY + 65 - leaderboardScrollY;
+                for (int i = 0; i < cachedTopScores.size(); i++) {
                   Map<String, Object> ps = cachedTopScores.get(i);
 
                     String name = (String) ps.get("username");
@@ -732,6 +744,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
                     entryY += 35;
                 }
+                
+                g2.setClip(oldClip);
             }
             
             int btnY_real = panelH / 2 + 200;

@@ -4,12 +4,14 @@ wa,248,100
 fao,227,124
 any,166,83
 kamu,157,84
+ahuy,138,67
 tati,131,54
 Mahasiswa,130,370
 tati,115,43
 syca,115,65
-<<<<<<< HEAD
 uput,112,108
 oya,108,118
-=======
->>>>>>> 28dcfd1094e089cf0246742f2c11520d3ad99c72
+eta,88,67
+daf,81,58
+ratna,32,21
+chik,25,28

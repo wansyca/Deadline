@@ -12,26 +12,46 @@ import java.util.Map;
 public class ScoreService {
 
     public void saveScore(int playerId, int score, int survivalTime) {
-        String query = "INSERT INTO scores (player_id, score, survival_time) VALUES (?, ?, ?)";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setInt(1, playerId);
-            pstmt.setInt(2, score);
-            pstmt.setInt(3, survivalTime);
-            pstmt.executeUpdate();
+        String checkQuery = "SELECT id FROM scores WHERE player_id = ?";
+        String insertQuery = "INSERT INTO scores (player_id, score, survival_time) VALUES (?, ?, ?)";
+        String updateQuery = "UPDATE scores SET score = ?, survival_time = ?, played_at = CURRENT_TIMESTAMP WHERE player_id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+            boolean exists = false;
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkQuery)) {
+                checkStmt.setInt(1, playerId);
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next()) exists = true;
+                }
+            }
+
+            if (exists) {
+                try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                    updateStmt.setInt(1, score);
+                    updateStmt.setInt(2, survivalTime);
+                    updateStmt.setInt(3, playerId);
+                    updateStmt.executeUpdate();
+                }
+            } else {
+                try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
+                    insertStmt.setInt(1, playerId);
+                    insertStmt.setInt(2, score);
+                    insertStmt.setInt(3, survivalTime);
+                    insertStmt.executeUpdate();
+                }
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    public List<Map<String, Object>> getTopScores(int limit) {
+    public List<Map<String, Object>> getAllScores() {
         List<Map<String, Object>> scores = new ArrayList<>();
         String query = "SELECT p.username, s.score, s.survival_time FROM scores s " +
                        "JOIN players p ON s.player_id = p.id " +
-                       "ORDER BY s.score DESC, s.survival_time DESC LIMIT ?";
+                       "ORDER BY s.score DESC, s.survival_time DESC";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setInt(1, limit);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     Map<String, Object> record = new HashMap<>();

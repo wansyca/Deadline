@@ -10,7 +10,7 @@ public class SubmissionDesk extends GameObject {
     private SubmissionService submissionService;
 
     public SubmissionDesk(int x, int y) {
-        super(x, y, 300, 100);
+        super(x, y, 200, 80);
         this.submissionService = new SubmissionService();
     }
 
@@ -27,30 +27,18 @@ public class SubmissionDesk extends GameObject {
 
     @Override
     public void draw(Graphics2D g2) {
-        // Anti-aliasing
         g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // 1. Bayangan bawah
-        g2.setColor(new Color(0, 0, 0, 40));
-        g2.fillRoundRect(x + 5, y + 5, width, height, 10, 10);
-
-        // 2. Body Meja (Coklat Tua)
-        g2.setColor(new Color(62, 39, 35));
-        g2.fillRoundRect(x, y, width, height, 8, 8);
-
-        // 3. Permukaan Atas (Warna Kayu Polished)
-        g2.setColor(new Color(93, 64, 55));
-        g2.fillRoundRect(x, y, width, height - 10, 8, 8);
-
-        // 4. Label "SUBMIT HERE"
+        g2.setColor(new Color(0, 0, 0, 150));
+        int textW = 110;
+        int textX = x + (width - textW) / 2;
+        int textY = y + height / 2 - 10;
+        g2.fillRoundRect(textX, textY - 14, textW, 20, 10, 10);
+        
         g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
         String text = "SUBMIT HERE";
         int tw = g2.getFontMetrics().stringWidth(text);
-        g2.drawString(text, x + (width - tw) / 2, y + height - 25);
-
-        // Highlight tepi
-        g2.setColor(new Color(255, 255, 255, 30));
-        g2.drawRoundRect(x, y, width, height - 10, 8, 8);
+        g2.drawString(text, x + (width - tw) / 2, textY);
     }
 }

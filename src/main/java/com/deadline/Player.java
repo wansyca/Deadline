@@ -186,4 +186,9 @@ public class Player extends GameObject {
     public void setCollectedBooks(int count) {
         this.collectedBooks = count;
     }
+
+    public String getAvatarPath() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAvatarPath'");
+    }
 }

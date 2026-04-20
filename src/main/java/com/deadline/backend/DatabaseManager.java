@@ -11,10 +11,20 @@ public class DatabaseManager {
     private static final String PASS = "";
 
     public static Connection getConnection() throws SQLException {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         return DriverManager.getConnection(URL, USER, PASS);
     }
 
     public static void initializeDatabase() {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/", USER, PASS);
              Statement stmt = conn.createStatement()) {
             
